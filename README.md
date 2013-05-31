@@ -48,16 +48,13 @@ For the moment, the recommended way is to use an OpenStack development environme
 like DevStack. We assume that you already know a bit about running OpenStack,
 particularly DevStack.
 
-1. Install DevStack itself
 
 ```
+# Install DevStack
 git clone git://github.com/openstack-dev/devstack.git
 cd devstack; ./stack.sh
-```
 
-2. Install the Nova driver and the Glance backend
-
-```
+# Install OpenStack-Docker Nova Driver and Glance Backend
 git clone git://github.com/dotcloud/openstack-docker.git
 cd openstack-docker ; ./setup_on_devstack.sh
 ```
