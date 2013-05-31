@@ -19,7 +19,7 @@ cd devstack; ./stack.sh
 2. Install the Nova driver + Glance backend (openstack-docker)
 
 ```
-setup_on_devstack.sh
+./setup_on_devstack.sh
 ```
 
 
