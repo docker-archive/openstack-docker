@@ -1,7 +1,7 @@
 OpenStack + Docker
 ==================
 
-OpenStack is (quoting [Wikipedia](http://en.wikipedia.org/wiki/OpenStack)!)
+OpenStack is (quoting [Wikipedia](http://en.wikipedia.org/wiki/OpenStack))
 "an Infrastructure as a Service (IaaS) cloud computing project that is free
 open source software released under the terms of the Apache License."
 
