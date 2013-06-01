@@ -1,4 +1,4 @@
-OpenStack + Docker
+OpenStack-docker: deploy lightweight linux containers on Openstack
 ==================
 
 [OpenStack](http://en.wikipedia.org/wiki/OpenStack) is
