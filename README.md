@@ -1,7 +1,7 @@
 OpenStack + Docker
 ==================
 
-OpenStack is (quoting [Wikipedia](http://en.wikipedia.org/wiki/OpenStack))
+[OpenStacj](http://en.wikipedia.org/wiki/OpenStack) is
 "an Infrastructure as a Service (IaaS) cloud computing project that is free
 open source software released under the terms of the Apache License."
 
@@ -9,7 +9,7 @@ You can deploy OpenStack on your physical machines, and then use OpenStack
 APIs (which are compatible with AWS APIs) to deploy virtual machines to
 run your applications.
 
-Docker is (quoting [docker.io](http://www.docker.io/)) "an open-source engine
+[Docker](http://www.docker.io) is "an open-source engine
 which automates the deployment of applications as highly portable, self-sufficient
 containers which are independent of hardware, language, framework, packaging system
 and hosting provider."
