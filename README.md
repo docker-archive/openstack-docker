@@ -71,7 +71,8 @@ When you create an instance, a new container is created. That's pretty much it!
 
 If you know Docker and Nova concepts, there are two useful technical bits of info:
 
-- XXX images?
+- Glance exposes Docker's images but does not store anything (this work is still
+  done by Docker itself).
 - Both Docker and Nova allocate IP addresses for the containers. So in fact, each
   container will end up having two IP addresses: one allocated by docker, on `eth0`;
   and another one allocated by Nova, on `eth1`. If it's deemed necessary, a future
