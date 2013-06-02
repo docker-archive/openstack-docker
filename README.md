@@ -1,7 +1,7 @@
-OpenStack + Docker
+OpenStack-docker: deploy lightweight linux containers on Openstack
 ==================
 
-[OpenStacK](http://en.wikipedia.org/wiki/OpenStack) is
+[OpenStack](http://en.wikipedia.org/wiki/OpenStack) is
 "an Infrastructure as a Service (IaaS) cloud computing project that is free
 open source software released under the terms of the Apache License."
 
