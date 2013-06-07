@@ -28,11 +28,28 @@ class Response(object):
             if not buf:
                 return
 
+    def _filter_data(self, obj):
+        """ All data returned are post-processed to avoid surprises with
+            different versions of Docker
+        """
+        if isinstance(obj, list):
+            new_list = []
+            for o in obj:
+                new_list.append(self._filter_data(o))
+            obj = new_list
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                if isinstance(k, basestring):
+                    obj[k.lower()] = v
+        return obj
+
     def _decode_json(self, http_response, data):
         if http_response.getheader('Content-Type') != 'application/json':
             return
         try:
-            return json.loads(self.data)
+            obj = json.loads(self.data)
+            obj = self._filter_data(obj)
+            return obj
         except ValueError:
             return
 
@@ -85,7 +102,7 @@ class HTTPClient(object):
         resp = Response(self._http_conn.getresponse())
         if resp.code != 201:
             return
-        return json.loads(resp.data).get('Id')
+        return json.loads(resp.data).get('id')
 
     def start_container(self, container_id):
         self._http_conn.request('POST',

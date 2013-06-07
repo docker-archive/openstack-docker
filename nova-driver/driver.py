@@ -45,7 +45,7 @@ class DockerDriver(driver.ComputeDriver):
     def list_instances(self, _inspect=False):
         res = []
         for container in self.docker.list_containers():
-            info = self.docker.inspect_container(container['Id'])
+            info = self.docker.inspect_container(container['id'])
             if _inspect is True:
                 res.append(info)
             else:
@@ -122,7 +122,7 @@ class DockerDriver(driver.ComputeDriver):
     def _setup_network(self, instance, network_info):
         if not network_info:
             return
-        container_id = self.find_container_by_name(instance['name']).get('Id')
+        container_id = self.find_container_by_name(instance['name']).get('id')
         if not container_id:
             return
         network_info = network_info[0]
@@ -192,7 +192,7 @@ class DockerDriver(driver.ComputeDriver):
 
     def destroy(self, instance, network_info, block_device_info=None,
                 destroy_disks=True):
-        container_id = self.find_container_by_name(instance['name']).get('Id')
+        container_id = self.find_container_by_name(instance['name']).get('id')
         if not container_id:
             return
         self.docker.stop_container(container_id)
@@ -200,26 +200,26 @@ class DockerDriver(driver.ComputeDriver):
 
     def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None, bad_volumes_callback=None):
-        container_id = self.find_container_by_name(instance['name']).get('Id')
+        container_id = self.find_container_by_name(instance['name']).get('id')
         if not container_id:
             return
         self.docker.stop_container(container_id)
         self.docker.start_container(container_id)
 
     def power_on(self, instance):
-        container_id = self.find_container_by_name(instance['name']).get('Id')
+        container_id = self.find_container_by_name(instance['name']).get('id')
         if not container_id:
             return
         self.docker.start_container(container_id)
 
     def power_off(self, instance):
-        container_id = self.find_container_by_name(instance['name']).get('Id')
+        container_id = self.find_container_by_name(instance['name']).get('id')
         if not container_id:
             return
         self.docker.stop_container(container_id)
 
     def get_console_output(self, instance):
-        container_id = self.find_container_by_name(instance['name']).get('Id')
+        container_id = self.find_container_by_name(instance['name']).get('id')
         if not container_id:
             return
         return self.docker.get_container_logs(container_id)
