@@ -102,7 +102,10 @@ class HTTPClient(object):
         resp = Response(self._http_conn.getresponse())
         if resp.code != 201:
             return
-        return json.loads(resp.data).get('id')
+        obj = json.loads(resp.data)
+        for k, v in obj.iteritems():
+            if k.lower() == 'id':
+                return v
 
     def start_container(self, container_id):
         self._http_conn.request('POST',
