@@ -6,6 +6,13 @@
     exit 1
 }
 
+docker_check=$(ps -ef | grep -v grep | grep docker)
+
+[ -z "$docker_check" ] && {
+    echo "ERROR: Docker is not running or is not installed"
+    exit 1
+}
+
 ROOT=$(dirname $(readlink -f "$0"))
 
 update_config() {
