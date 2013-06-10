@@ -114,9 +114,10 @@ class DockerDriver(driver.ComputeDriver):
         cgroup_path = self._find_cgroup_devices_path()
         lxc_path = os.path.join(cgroup_path, 'lxc')
         tasks_path = os.path.join(lxc_path, container_id, 'tasks')
-        
+        # FIXME: this is to avoid a race conditions when there is no tasks yet
+        # in the cgroup. However it would be much more reliable to watch the
+        # the file regularly with a timeout
         time.sleep(1)
-        
         with open(tasks_path) as f:
             pids = f.readlines()
             if not pids:
