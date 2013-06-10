@@ -8,6 +8,7 @@ import os
 import socket
 import base64
 import random
+import time
 
 from oslo.config import cfg
 
@@ -113,6 +114,9 @@ class DockerDriver(driver.ComputeDriver):
         cgroup_path = self._find_cgroup_devices_path()
         lxc_path = os.path.join(cgroup_path, 'lxc')
         tasks_path = os.path.join(lxc_path, container_id, 'tasks')
+        
+        time.sleep(1)
+        
         with open(tasks_path) as f:
             pids = f.readlines()
             if not pids:
