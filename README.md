@@ -50,6 +50,9 @@ particularly DevStack.
 
 
 ```
+# Install and Run Docker's daemon: http://docs.docker.io/en/latest/use/basics/
+sudo docker -d &
+
 # Install DevStack
 git clone git://github.com/openstack-dev/devstack.git
 cd devstack; ./stack.sh
