@@ -89,3 +89,16 @@ everything right on the first try :-)
 
 Also, Docker itself is not yet production-ready. But it's maturing quickly!
 
+
+Run Nova unit tests
+-------------------
+
+The Nova driver implements a Mock Docker client that allows to use it in
+"Fake mode" for unit testing.
+
+From Nova main repository, you can use those unit tests by running:
+
+```
+./run_tests.sh --virtual-env-path ~/.virtualenvs/ --virtual-env-name nova nova.tests.virt.test_virt_drivers.DockerDriverTestCase
+```
+

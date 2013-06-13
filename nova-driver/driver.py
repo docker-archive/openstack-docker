@@ -38,6 +38,12 @@ class DockerDriver(driver.ComputeDriver):
         super(DockerDriver, self).__init__(virtapi)
         self.docker = client.HTTPClient()
         self.virtapi = virtapi
+        self.fake = False
+
+    def use_mock_client(self):
+        """Replace HTTP Client with the Mock one (useful for unit tests)"""
+        self.docker = client.MockClient()
+        self.fake = True
 
     def init_host(self, host):
         if self.docker.is_daemon_running() is False:
@@ -84,11 +90,22 @@ class DockerDriver(driver.ComputeDriver):
         return info
 
     def get_host_stats(self, refresh=False):
+        #TODO: implement
         hostname = socket.gethostname()
         stats = {
                 'hypervisor_hostname': hostname,
                 'host_hostname': hostname,
-                'host_name_label': hostname
+                'host_name_label': hostname,
+                'host_name-description': hostname,
+                'host_memory_total': 8000000000,
+                'host_memory_overhead': 10000000,
+                'host_memory_free': 7900000000,
+                'host_memory_free_computed': 7900000000,
+                'host_other_config': {},
+                'host_cpu_info': {},
+                'disk_available': 500000000000,
+                'disk_total': 600000000000,
+                'disk_used': 100000000000
                 }
         return stats
 
@@ -125,7 +142,7 @@ class DockerDriver(driver.ComputeDriver):
             return int(pids[0].strip())
 
     def _setup_network(self, instance, network_info):
-        if not network_info:
+        if self.fake is True or not network_info:
             return
         container_id = self.find_container_by_name(instance['name']).get('id')
         if not container_id:
