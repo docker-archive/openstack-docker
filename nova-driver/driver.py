@@ -4,20 +4,20 @@
 A Docker Hypervisor which allows running Linux Containers instead of VMs.
 """
 
-import os
-import socket
 import base64
+import os
 import random
+import socket
 import time
 
 from oslo.config import cfg
 
 from nova.compute import power_state
 from nova import exception
-from nova import utils
 from nova.openstack.common import log as logging
-from nova.virt import driver
+from nova import utils
 from nova.virt.docker import client
+from nova.virt import driver
 
 CONF = cfg.CONF
 CONF.import_opt('host', 'nova.netconf')
@@ -40,7 +40,7 @@ class DockerDriver(driver.ComputeDriver):
         self.fake = False
 
     def use_mock_client(self):
-        """Replace HTTP Client with the Mock one (useful for unit tests)"""
+        """Replace HTTP Client with the Mock one (useful for unit tests)."""
         self.docker = client.MockClient()
         self.fake = True
 
@@ -91,7 +91,7 @@ class DockerDriver(driver.ComputeDriver):
         return info
 
     def get_host_stats(self, refresh=False):
-        #TODO: implement
+        #TODO(samalba): implement
         hostname = socket.gethostname()
         stats = {
             'hypervisor_hostname': hostname,
@@ -111,7 +111,7 @@ class DockerDriver(driver.ComputeDriver):
         return stats
 
     def get_available_resource(self, nodename):
-        #TODO: implement
+        #TODO(samalba): implement
         return {
             'vcpus': 1,
             'memory_mb': 8192,
@@ -259,7 +259,7 @@ class DockerDriver(driver.ComputeDriver):
 
 #TEST
 def _dump(var):
-    import sys
     import json
+    import sys
     print json.dumps(var, indent=4)
     sys.exit(1)

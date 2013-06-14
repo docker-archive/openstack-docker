@@ -1,14 +1,14 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-import time
-import string
-import random
-import socket
-import httplib
 import datetime
 import functools
-from urlparse import urlparse
+import httplib
 import json
+import random
+import socket
+import string
+import time
+from urlparse import urlparse
 try:
     from nova.openstack.common import log as logging
 except ImportError:
@@ -20,7 +20,8 @@ LOG = logging.getLogger(__name__)
 
 def filter_data(f):
     """Decorator that post-processes data returned by Docker to avoid any
-        surprises with different versions of Docker"""
+       surprises with different versions of Docker
+    """
     @functools.wraps(f)
     def wrapper(*args, **kwds):
         out = f(*args, **kwds)
