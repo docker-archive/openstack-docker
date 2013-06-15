@@ -9,6 +9,7 @@ import socket
 import string
 import time
 from urlparse import urlparse
+
 try:
     from nova.openstack.common import log as logging
 except ImportError:

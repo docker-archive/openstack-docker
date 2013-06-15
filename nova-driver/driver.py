@@ -17,6 +17,7 @@ from nova import exception
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.docker import client
+from nova.virt.docker import hostinfo
 from nova.virt import driver
 
 CONF = cfg.CONF
@@ -52,7 +53,7 @@ class DockerDriver(driver.ComputeDriver):
         res = []
         for container in self.docker.list_containers():
             info = self.docker.inspect_container(container['id'])
-            if _inspect is True:
+            if _inspect:
                 res.append(info)
             else:
                 res.append(info['Config'].get('Hostname'))
@@ -91,39 +92,43 @@ class DockerDriver(driver.ComputeDriver):
         return info
 
     def get_host_stats(self, refresh=False):
-        #TODO(samalba): implement
+        st = os.statvfs('/var/lib/docker')
         hostname = socket.gethostname()
+        memory = hostinfo.get_memory_usage()
+        disk = hostinfo.get_disk_usage()
         stats = {
             'hypervisor_hostname': hostname,
             'host_hostname': hostname,
             'host_name_label': hostname,
             'host_name-description': hostname,
-            'host_memory_total': 8000000000,
-            'host_memory_overhead': 10000000,
-            'host_memory_free': 7900000000,
-            'host_memory_free_computed': 7900000000,
+            'host_memory_total': memory['total'],
+            'host_memory_overhead': memory['used'],
+            'host_memory_free': memory['free'],
+            'host_memory_free_computed': memory['free'],
             'host_other_config': {},
             'host_cpu_info': {},
-            'disk_available': 500000000000,
-            'disk_total': 600000000000,
-            'disk_used': 100000000000
+            'disk_available': disk['available'],
+            'disk_total': disk['total'],
+            'disk_used': disk['used']
         }
         return stats
 
     def get_available_resource(self, nodename):
-        #TODO(samalba): implement
-        return {
+        memory = hostinfo.get_memory_usage()
+        disk = hostinfo.get_disk_usage()
+        stats = {
             'vcpus': 1,
-            'memory_mb': 8192,
-            'local_gb': 1028,
+            'memory_mb': memory['total'] / 1024 / 1024,
+            'local_gb': disk['total'] / 1024 / 1024 / 1024,
             'vcpus_used': 0,
-            'memory_mb_used': 0,
-            'local_gb_used': 0,
+            'memory_mb_used': memory['used'] / 1024 / 1024,
+            'local_gb_used': disk['used'] / 1024 / 1024 / 1024,
             'hypervisor_type': 'docker',
             'hypervisor_version': '1.0',
             'hypervisor_hostname': nodename,
             'cpu_info': '?'
         }
+        return stats
 
     def _find_cgroup_devices_path(self):
         for ln in open('/proc/mounts'):
@@ -255,11 +260,3 @@ class DockerDriver(driver.ComputeDriver):
         if not container_id:
             return
         return self.docker.get_container_logs(container_id)
-
-
-#TEST
-def _dump(var):
-    import json
-    import sys
-    print json.dumps(var, indent=4)
-    sys.exit(1)
