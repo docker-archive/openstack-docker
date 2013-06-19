@@ -83,9 +83,12 @@ the code submitted to the core to keep it aligned with the last versions of
 Docker.
 
 
-[1] http://www.docker.io/
-[2] https://wiki.openstack.org/wiki/XenAPI#Discussion
-[3] http://libvirt.org/goals.html
-[4] http://docs.docker.io/en/latest/commandline/command/diff/
-[5] http://docs.docker.io/en/latest/use/workingwithrepository/
-[6] http://docs.docker.io/en/latest/use/builder/
+References
+----------
+
+1. http://www.docker.io/
+2. https://wiki.openstack.org/wiki/XenAPI#Discussion
+3. http://libvirt.org/goals.html
+4. http://docs.docker.io/en/latest/commandline/command/diff/
+5. http://docs.docker.io/en/latest/use/workingwithrepository/
+6. http://docs.docker.io/en/latest/use/builder/
