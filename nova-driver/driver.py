@@ -92,7 +92,6 @@ class DockerDriver(driver.ComputeDriver):
         return info
 
     def get_host_stats(self, refresh=False):
-        st = os.statvfs('/var/lib/docker')
         hostname = socket.gethostname()
         memory = hostinfo.get_memory_usage()
         disk = hostinfo.get_disk_usage()

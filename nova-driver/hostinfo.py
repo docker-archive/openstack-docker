@@ -4,7 +4,12 @@ import os
 
 
 def get_disk_usage():
-    st = os.statvfs('/var/lib/docker')
+    # This is the location where Docker stores its containers. It's currently
+    # hardcoded in Docker so it's not configurable yet.
+    docker_path = '/var/lib/docker'
+    if not os.path.exists(docker_path):
+        docker_path = '/'
+    st = os.statvfs(docker_path)
     return {
         'total': st.f_blocks * st.f_frsize,
         'available': st.f_bavail * st.f_frsize,
