@@ -109,7 +109,8 @@ def image_get(context, image_id, session=None, force_show_deleted=False):
 @log_call
 def image_get_all(context, filters=None, marker=None, limit=None,
                   sort_key='created_at', sort_dir='desc',
-                  member_status='accepted', is_public=None):
+                  member_status='accepted', is_public=None,
+                  admin_as_user=False):
     _init_cache()
     return [_image_format(i) for i in IMAGES_CACHE]
 
