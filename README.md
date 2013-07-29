@@ -59,7 +59,10 @@ cd devstack; ./stack.sh
 
 # Install OpenStack-Docker Nova Driver and Glance Backend
 git clone git://github.com/dotcloud/openstack-docker.git
-cd openstack-docker ; ./setup_on_devstack.sh
+cd openstack-docker && sudo ./setup_on_devstack.sh
+
+# Restart glance-registry and nova-compute from the devstack screen
+screen -rd
 ```
 
 That's it!
