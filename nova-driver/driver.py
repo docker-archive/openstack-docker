@@ -19,6 +19,8 @@ from nova import utils
 from nova.virt.docker import client
 from nova.virt.docker import hostinfo
 from nova.virt import driver
+import yaml
+
 
 CONF = cfg.CONF
 CONF.import_opt('host', 'nova.netconf')
@@ -196,9 +198,21 @@ class DockerDriver(driver.ComputeDriver):
               admin_password, network_info=None, block_device_info=None):
         cmd = ['/bin/sh']
         user_data = instance.get('user_data')
+        image_name = 'ubuntu'
         if user_data:
-            cmd = ['/bin/sh', '-c', base64.b64decode(user_data)]
-        image_name = image_meta.get('name', 'ubuntu')
+            try:
+                user_data = base64.b64decode(user_data)
+                user_data = yaml.safe_load(user_data)
+                if not isinstance(user_data, dict):
+                    raise TypeError('Expecting a dict')
+            except (yaml.error.YAMLError, TypeError) as e:
+                raise exception.InstanceDeployFailure(
+                    'Cannot deploy (wrong user_data field): {0}'.format(e),
+                    instance_id=instance['name'])
+            if 'cmd' in user_data:
+                cmd = ['/bin/sh', '-c', user_data.get('cmd')]
+            if 'image' in user_data:
+                image_name = user_data.get('image')
         args = {
             'Hostname': instance['name'],
             'Image': image_name,
