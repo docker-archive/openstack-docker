@@ -209,7 +209,7 @@ class HTTPClient(object):
     def list_containers(self, _all=True):
         self._http_conn.request(
             'GET',
-            '/1.3/containers/ps?all={0}&limit=50'.format(int(_all)))
+            '/v1.3/containers/ps?all={0}&limit=50'.format(int(_all)))
         resp = Response(self._http_conn.getresponse())
         return resp.json
 
@@ -236,7 +236,7 @@ class HTTPClient(object):
         data.update(args)
         self._http_conn.request(
             'POST',
-            '/1.3/containers/create',
+            '/v1.3/containers/create',
             body=json.dumps(data),
             headers={'Content-Type': 'application/json'})
         resp = Response(self._http_conn.getresponse())
@@ -250,14 +250,14 @@ class HTTPClient(object):
     def start_container(self, container_id):
         self._http_conn.request(
             'POST',
-            '/1.3/containers/{0}/start'.format(container_id))
+            '/v1.3/containers/{0}/start'.format(container_id))
         resp = Response(self._http_conn.getresponse())
         return (resp.code == 200)
 
     def inspect_container(self, container_id):
         self._http_conn.request(
             'GET',
-            '/1.3/containers/{0}/json'.format(container_id))
+            '/v1.3/containers/{0}/json'.format(container_id))
         resp = Response(self._http_conn.getresponse())
         if resp.code != 200:
             return
@@ -268,28 +268,28 @@ class HTTPClient(object):
             timeout = 5
         self._http_conn.request(
             'POST',
-            '/1.3/containers/{0}/stop?t={1}'.format(container_id, timeout))
+            '/v1.3/containers/{0}/stop?t={1}'.format(container_id, timeout))
         resp = Response(self._http_conn.getresponse())
         return (resp.code == 204)
 
     def destroy_container(self, container_id):
         self._http_conn.request(
             'DELETE',
-            '/1.3/containers/{0}'.format(container_id))
+            '/v1.3/containers/{0}'.format(container_id))
         resp = Response(self._http_conn.getresponse())
         return (resp.code == 204)
 
     def pull_repository(self, name):
         self._http_conn.request(
             'POST',
-            '/1.3/images/create?fromImage={0}'.format(name))
+            '/v1.3/images/create?fromImage={0}'.format(name))
         resp = Response(self._http_conn.getresponse(), skip_body=True)
         return (resp.code == 200)
 
     def get_container_logs(self, container_id):
         self._http_conn.request(
             'POST',
-            ('/1.3/containers/{0}/attach'
+            ('/v1.3/containers/{0}/attach'
              '?logs=1&stream=0&stdout=1&stderr=1').format(container_id))
         resp = Response(self._http_conn.getresponse())
         if resp.code != 200:
