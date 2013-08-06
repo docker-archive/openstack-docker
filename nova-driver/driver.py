@@ -19,7 +19,6 @@ from nova import utils
 from nova.virt.docker import client
 from nova.virt.docker import hostinfo
 from nova.virt import driver
-import yaml
 
 
 CONF = cfg.CONF
@@ -198,21 +197,32 @@ class DockerDriver(driver.ComputeDriver):
             if_remote_name, ip,
             run_as_root=True)
 
+    def _parse_user_data(self, user_data):
+        data = {}
+        try:
+            user_data = base64.b64decode(user_data)
+            if not isinstance(user_data, dict):
+                raise TypeError('Expecting a dict')
+        except TypeError as e:
+            raise exception.InstanceDeployFailure(
+                'Cannot deploy (wrong user_data field): {0}'.format(e))
+        for ln in user_data.split('\n'):
+            ln = ln.strip()
+            if not ln or ':' not in ln:
+                continue
+            if ln.startswith('#'):
+                continue
+            ln = ln.split(':', 1)
+            data[ln[0].strip()] = ln[1].strip('"\' ')
+        return data
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
         cmd = ['/bin/sh']
         user_data = instance.get('user_data')
         image_name = 'ubuntu'
         if user_data:
-            try:
-                user_data = base64.b64decode(user_data)
-                user_data = yaml.safe_load(user_data)
-                if not isinstance(user_data, dict):
-                    raise TypeError('Expecting a dict')
-            except (yaml.error.YAMLError, TypeError) as e:
-                raise exception.InstanceDeployFailure(
-                    'Cannot deploy (wrong user_data field): {0}'.format(e),
-                    instance_id=instance['name'])
+            user_data = self._parse_user_data(user_data)
             if 'cmd' in user_data:
                 cmd = ['/bin/sh', '-c', user_data.get('cmd')]
             if 'image' in user_data:

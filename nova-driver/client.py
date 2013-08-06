@@ -1,6 +1,5 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-import datetime
 import functools
 import httplib
 import json
@@ -12,7 +11,9 @@ from urlparse import urlparse
 
 try:
     from nova.openstack.common import log as logging
+    from nova.openstack.common import timeutils
 except ImportError:
+    from datetime import datetime as timeutils
     import logging
 
 
@@ -111,7 +112,7 @@ class MockClient(object):
         info = {
             'Args': [],
             'Config': container['config'],
-            'Created': str(datetime.datetime.utcnow()),
+            'Created': str(timeutils.utcnow()),
             'ID': container_id,
             'Image': self._fake_id(),
             'NetworkSettings': {
@@ -128,7 +129,7 @@ class MockClient(object):
                 'Ghost': False,
                 'Pid': 0,
                 'Running': container['running'],
-                'StartedAt': str(datetime.datetime.utcnow())
+                'StartedAt': str(timeutils.utcnow())
             },
             'SysInitPath': '/tmp/docker',
             'Volumes': {},
