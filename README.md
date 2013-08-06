@@ -68,6 +68,28 @@ screen -rd
 That's it!
 
 
+How can I start a container with the image I want?
+--------------------------------------------------
+
+By default, the container is started using the ubuntu image, but you can use
+the user_data field to actually spawn anything you want.
+
+From Horizon, when creating the instance, go to the tab "Post-Creation" and
+put the following info in the "Customization Script" text area:
+
+```
+#docker
+image: centos
+cmd: "while true; do date ; sleep 1; done"
+```
+
+This will start a container using the CentOS image and run display the date
+every 1 second (you can verify this in the logs).
+
+Note: that you can use the "cmd" field to spawn anything more useful such as
+a opensshd or an apache daemon.
+
+
 What's Under The Hood?
 ----------------------
 
