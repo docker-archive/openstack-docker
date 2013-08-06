@@ -270,7 +270,7 @@ class DockerDriver(driver.ComputeDriver):
         self.docker.stop_container(container_id)
         self.docker.start_container(container_id)
 
-    def power_on(self, instance):
+    def power_on(self, context, instance, network_info, block_device_info):
         container_id = self.find_container_by_name(instance['name']).get('id')
         if not container_id:
             return
