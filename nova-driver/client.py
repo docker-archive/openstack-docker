@@ -9,12 +9,8 @@ import string
 import time
 from urlparse import urlparse
 
-try:
-    from nova.openstack.common import log as logging
-    from nova.openstack.common import timeutils
-except ImportError:
-    from datetime import datetime as timeutils
-    import logging
+from nova.openstack.common import log as logging
+from nova.openstack.common import timeutils
 
 
 LOG = logging.getLogger(__name__)
