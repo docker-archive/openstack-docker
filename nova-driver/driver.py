@@ -199,13 +199,7 @@ class DockerDriver(driver.ComputeDriver):
 
     def _parse_user_data(self, user_data):
         data = {}
-        try:
-            user_data = base64.b64decode(user_data)
-            if not isinstance(user_data, dict):
-                raise TypeError('Expecting a dict')
-        except TypeError as e:
-            raise exception.InstanceDeployFailure(
-                'Cannot deploy (wrong user_data field): {0}'.format(e))
+        user_data = base64.b64decode(user_data)
         for ln in user_data.split('\n'):
             ln = ln.strip()
             if not ln or ':' not in ln:
