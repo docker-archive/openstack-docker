@@ -170,22 +170,17 @@ class MockClient(object):
 
 class Response(object):
     def __init__(self, http_response, skip_body=False):
+        self._response = http_response
         self.code = int(http_response.status)
-        if skip_body is True:
-            self._consume_body(http_response)
-            return
         self.data = http_response.read()
-        self.json = self._decode_json(http_response, self.data)
+        self.json = self._decode_json(self.data)
 
-    def _consume_body(self, http_response):
-        while True:
-            buf = http_response.read(1024)
-            if not buf:
-                return
+    def read(self, size=None):
+        return self._response.read(size)
 
     @filter_data
-    def _decode_json(self, http_response, data):
-        if http_response.getheader('Content-Type') != 'application/json':
+    def _decode_json(self, data):
+        if self._response.getheader('Content-Type') != 'application/json':
             return
         try:
             return json.loads(self.data)
@@ -197,8 +192,7 @@ class HTTPClient(object):
     def __init__(self, endpoint=None):
         if endpoint is None:
             endpoint = 'http://localhost:4243'
-        url = urlparse(endpoint)
-        self._http_conn = httplib.HTTPConnection(url.hostname, url.port)
+        self._url = urlparse(endpoint)
 
     def is_daemon_running(self):
         try:
@@ -207,11 +201,15 @@ class HTTPClient(object):
         except socket.error:
             return False
 
+    def make_request(self, *args, **kwargs):
+        conn = httplib.HTTPConnection(self._url.hostname, self._url.port)
+        conn.request(*args, **kwargs)
+        return Response(conn.getresponse())
+
     def list_containers(self, _all=True):
-        self._http_conn.request(
+        resp = self.make_request(
             'GET',
             '/v1.3/containers/ps?all={0}&limit=50'.format(int(_all)))
-        resp = Response(self._http_conn.getresponse())
         return resp.json
 
     def create_container(self, args):
@@ -235,12 +233,11 @@ class HTTPClient(object):
             'VolumesFrom': ''
         }
         data.update(args)
-        self._http_conn.request(
+        resp = self.make_request(
             'POST',
             '/v1.3/containers/create',
             body=json.dumps(data),
             headers={'Content-Type': 'application/json'})
-        resp = Response(self._http_conn.getresponse())
         if resp.code != 201:
             return
         obj = json.loads(resp.data)
@@ -249,17 +246,15 @@ class HTTPClient(object):
                 return v
 
     def start_container(self, container_id):
-        self._http_conn.request(
+        resp = self.make_request(
             'POST',
             '/v1.3/containers/{0}/start'.format(container_id))
-        resp = Response(self._http_conn.getresponse())
         return (resp.code == 200)
 
     def inspect_container(self, container_id):
-        self._http_conn.request(
+        resp = self.make_request(
             'GET',
             '/v1.3/containers/{0}/json'.format(container_id))
-        resp = Response(self._http_conn.getresponse())
         if resp.code != 200:
             return
         return resp.json
@@ -267,32 +262,33 @@ class HTTPClient(object):
     def stop_container(self, container_id, timeout=None):
         if timeout is None:
             timeout = 5
-        self._http_conn.request(
+        resp = self.make_request(
             'POST',
             '/v1.3/containers/{0}/stop?t={1}'.format(container_id, timeout))
-        resp = Response(self._http_conn.getresponse())
         return (resp.code == 204)
 
     def destroy_container(self, container_id):
-        self._http_conn.request(
+        resp = self.make_request(
             'DELETE',
             '/v1.3/containers/{0}'.format(container_id))
-        resp = Response(self._http_conn.getresponse())
         return (resp.code == 204)
 
     def pull_repository(self, name):
-        self._http_conn.request(
+        resp = self.make_request(
             'POST',
             '/v1.3/images/create?fromImage={0}'.format(name))
-        resp = Response(self._http_conn.getresponse(), skip_body=True)
+        while True:
+            buf = resp.read(1024)
+            if not buf:
+                # Image pull completed
+                break
         return (resp.code == 200)
 
     def get_container_logs(self, container_id):
-        self._http_conn.request(
+        resp = self.make_request(
             'POST',
             ('/v1.3/containers/{0}/attach'
              '?logs=1&stream=0&stdout=1&stderr=1').format(container_id))
-        resp = Response(self._http_conn.getresponse())
         if resp.code != 200:
             return
         return resp.data
