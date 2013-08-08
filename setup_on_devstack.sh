@@ -37,12 +37,12 @@ install_nova_driver() {
     update_config /etc/nova/nova.conf compute_driver docker.DockerDriver
 }
 
-install_glance_backend() {
-    echo "Installing Docker image backend for Glance"
-    ln -snf ${ROOT}/glance-db-backend /opt/stack/glance/glance/db/docker
-    update_config /etc/glance/glance-registry.conf data_api glance.db.docker.api
-}
+# DISABLED
+#install_glance_backend() {
+#    echo "Installing Docker image backend for Glance"
+#    ln -snf ${ROOT}/glance-db-backend /opt/stack/glance/glance/db/docker
+#    update_config /etc/glance/glance-registry.conf data_api glance.db.docker.api
+#}
 
 install_nova_driver
-install_glance_backend
 echo "Please restart 'nova-compute' and 'glance-registry'"
