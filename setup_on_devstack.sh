@@ -45,4 +45,4 @@ install_nova_driver() {
 #}
 
 install_nova_driver
-echo "Please restart 'nova-compute' and 'glance-registry'"
+echo "Please restart 'nova-compute' (n-cpu)"
