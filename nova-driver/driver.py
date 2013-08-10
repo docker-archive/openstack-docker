@@ -52,7 +52,7 @@ class DockerDriver(driver.ComputeDriver):
 
     def __init__(self, virtapi, read_only=False):
         super(DockerDriver, self).__init__(virtapi)
-        self.docker = client.HTTPClient()
+        self.docker = client.DockerHTTPClient()
         self.virtapi = virtapi
         self.fake = False
 

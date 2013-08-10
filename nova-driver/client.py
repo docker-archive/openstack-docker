@@ -22,7 +22,6 @@ import random
 import socket
 import string
 import time
-from urlparse import urlparse
 
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -199,11 +198,22 @@ class Response(object):
             return
 
 
-class HTTPClient(object):
-    def __init__(self, endpoint=None):
-        if endpoint is None:
-            endpoint = 'http://localhost:4243'
-        self._url = urlparse(endpoint)
+class UnixHTTPConnection(httplib.HTTPConnection):
+    def __init__(self, unix_socket):
+        httplib.HTTPConnection.__init__(self, 'localhost')
+        self.unix_socket = unix_socket
+
+    def connect(self):
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.connect(self.unix_socket)
+        self.sock = sock
+
+
+class DockerHTTPClient(object):
+    def __init__(self, unix_socket=None):
+        if unix_socket is None:
+            unix_socket = '/var/run/docker.sock'
+        self._unix_socket = unix_socket
 
     def is_daemon_running(self):
         try:
@@ -213,7 +223,7 @@ class HTTPClient(object):
             return False
 
     def make_request(self, *args, **kwargs):
-        conn = httplib.HTTPConnection(self._url.hostname, self._url.port)
+        conn = UnixHTTPConnection(self._unix_socket)
         conn.request(*args, **kwargs)
         return Response(conn.getresponse())
 
