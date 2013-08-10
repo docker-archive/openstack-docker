@@ -156,17 +156,17 @@ class DockerDriver(driver.ComputeDriver):
         tasks_path = os.path.join(lxc_path, container_id, 'tasks')
         n = 0
         while True:
-            if n > 10:
+            if n > 20:
                 return
-            if os.path.exists(tasks_path):
-                break
+            try:
+                with open(tasks_path) as f:
+                    pids = f.readlines()
+                    if pids:
+                        return int(pids[0].strip())
+            except IOError:
+                pass
             time.sleep(0.5)
             n += 1
-        with open(tasks_path) as f:
-            pids = f.readlines()
-            if not pids:
-                return
-            return int(pids[0].strip())
 
     def _setup_network(self, instance, network_info):
         if self.fake is True or not network_info:
