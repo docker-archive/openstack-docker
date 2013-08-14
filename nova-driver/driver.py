@@ -225,6 +225,13 @@ class DockerDriver(driver.ComputeDriver):
             data[ln[0].strip()] = ln[1].strip('"\' ')
         return data
 
+    def _get_memory_limit_bytes(self, instance):
+        for metadata in instance.get('system_metadata', []):
+            if not metadata['deleted'] and \
+                    metadata['key'] == 'instance_type_memory_mb':
+                        return int(metadata['value']) * 1024 * 1024
+        return 0
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
         cmd = ['/bin/sh']
@@ -239,7 +246,8 @@ class DockerDriver(driver.ComputeDriver):
         args = {
             'Hostname': instance['name'],
             'Image': image_name,
-            'Cmd': cmd
+            'Cmd': cmd,
+            'Memory': self._get_memory_limit_bytes(instance)
         }
         container_id = self.docker.create_container(args)
         if container_id is None:
