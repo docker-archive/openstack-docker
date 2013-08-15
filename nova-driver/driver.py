@@ -112,6 +112,7 @@ class DockerDriver(driver.ComputeDriver):
         memory = hostinfo.get_memory_usage()
         disk = hostinfo.get_disk_usage()
         stats = {
+            'vcpus': 1,
             'hypervisor_hostname': hostname,
             'host_hostname': hostname,
             'host_name_label': hostname,
@@ -133,11 +134,12 @@ class DockerDriver(driver.ComputeDriver):
         disk = hostinfo.get_disk_usage()
         stats = {
             'vcpus': 1,
-            'memory_mb': memory['total'] / 1024 / 1024,
-            'local_gb': disk['total'] / 1024 / 1024 / 1024,
             'vcpus_used': 0,
-            'memory_mb_used': memory['used'] / 1024 / 1024,
-            'local_gb_used': disk['used'] / 1024 / 1024 / 1024,
+            'memory_mb': memory['total'] / (1024 ** 2),
+            'local_gb': disk['total'] / (1024 ** 3),
+            'memory_mb_used': memory['used'] / (1024 ** 2),
+            'local_gb_used': disk['used'] / (1024 ** 3),
+            'available_least': disk['available'] / (1024 ** 3),
             'hypervisor_type': 'docker',
             'hypervisor_version': '1.0',
             'hypervisor_hostname': nodename,
