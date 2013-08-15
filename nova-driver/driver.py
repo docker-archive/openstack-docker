@@ -30,7 +30,7 @@ from oslo.config import cfg
 from nova.compute import power_state
 from nova.compute import task_states
 from nova import exception
-from nova.openstack.common import log as logging
+from nova.openstack.common import log
 from nova import utils
 from nova.virt.docker import client
 from nova.virt.docker import hostinfo
@@ -40,7 +40,7 @@ from nova.virt import driver
 CONF = cfg.CONF
 CONF.import_opt('host', 'nova.netconf')
 
-LOG = logging.getLogger(__name__)
+LOG = log.getLogger(__name__)
 
 
 class DockerDriver(driver.ComputeDriver):
