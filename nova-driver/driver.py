@@ -28,7 +28,6 @@ import time
 from oslo.config import cfg
 
 from nova.compute import power_state
-from nova.compute import task_states
 from nova import exception
 from nova.openstack.common import log
 from nova import utils
