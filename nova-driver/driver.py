@@ -63,7 +63,8 @@ class DockerDriver(driver.ComputeDriver):
 
     def init_host(self, host):
         if self.docker.is_daemon_running() is False:
-            raise exception.NovaException("Docker daemon is not running")
+            raise exception.NovaException("Docker daemon is not running or is "
+                    "not reachable (check the rights on /var/run/docker.sock)")
 
     def list_instances(self, _inspect=False):
         res = []
