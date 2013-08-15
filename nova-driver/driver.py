@@ -86,16 +86,16 @@ class DockerDriver(driver.ComputeDriver):
         """Unplug VIFs from networks."""
         pass
 
-    def find_container_by_uuid(self, uuid):
+    def find_container_by_name(self, name):
         for info in self.list_instances(_inspect=True):
-            if info['Config'].get('Hostname') == uuid:
+            if info['Config'].get('Hostname') == name:
                 return info
         return {}
 
     def get_info(self, instance):
-        container = self.find_container_by_uuid(instance['uuid'])
+        container = self.find_container_by_name(instance['name'])
         if not container:
-            raise exception.InstanceNotFound(instance_id=instance['uuid'])
+            raise exception.InstanceNotFound(instance_id=instance['name'])
         running = container['State'].get('Running')
         info = {
             'max_mem': 0,
@@ -171,7 +171,7 @@ class DockerDriver(driver.ComputeDriver):
     def _setup_network(self, instance, network_info):
         if self.fake is True or not network_info:
             return
-        container_id = self.find_container_by_uuid(instance['uuid']).get('id')
+        container_id = self.find_container_by_name(instance['name']).get('id')
         if not container_id:
             return
         network_info = network_info[0]
@@ -244,7 +244,7 @@ class DockerDriver(driver.ComputeDriver):
             if 'image' in user_data:
                 image_name = user_data.get('image')
         args = {
-            'Hostname': instance['uuid'],
+            'Hostname': instance['name'],
             'Image': image_name,
             'Cmd': cmd,
             'Memory': self._get_memory_limit_bytes(instance)
@@ -257,23 +257,23 @@ class DockerDriver(driver.ComputeDriver):
             if res is False:
                 raise exception.InstanceDeployFailure(
                     'Cannot pull missing image',
-                    instance_id=instance['uuid'])
+                    instance_id=instance['name'])
             container_id = self.docker.create_container(args)
             if container_id is None:
                 raise exception.InstanceDeployFailure(
                     'Cannot create container',
-                    instance_id=instance['uuid'])
+                    instance_id=instance['name'])
         self.docker.start_container(container_id)
         try:
             self._setup_network(instance, network_info)
         except Exception as e:
             raise exception.InstanceDeployFailure(
                 'Cannot setup network: {0}'.format(e),
-                instance_id=instance['uuid'])
+                instance_id=instance['name'])
 
     def destroy(self, instance, network_info, block_device_info=None,
                 destroy_disks=True):
-        container_id = self.find_container_by_uuid(instance['uuid']).get('id')
+        container_id = self.find_container_by_name(instance['name']).get('id')
         if not container_id:
             return
         self.docker.stop_container(container_id)
@@ -281,26 +281,26 @@ class DockerDriver(driver.ComputeDriver):
 
     def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None, bad_volumes_callback=None):
-        container_id = self.find_container_by_uuid(instance['uuid']).get('id')
+        container_id = self.find_container_by_name(instance['name']).get('id')
         if not container_id:
             return
         self.docker.stop_container(container_id)
         self.docker.start_container(container_id)
 
     def power_on(self, context, instance, network_info, block_device_info):
-        container_id = self.find_container_by_uuid(instance['uuid']).get('id')
+        container_id = self.find_container_by_name(instance['name']).get('id')
         if not container_id:
             return
         self.docker.start_container(container_id)
 
     def power_off(self, instance):
-        container_id = self.find_container_by_uuid(instance['uuid']).get('id')
+        container_id = self.find_container_by_name(instance['name']).get('id')
         if not container_id:
             return
         self.docker.stop_container(container_id)
 
     def get_console_output(self, instance):
-        container_id = self.find_container_by_uuid(instance['uuid']).get('id')
+        container_id = self.find_container_by_name(instance['name']).get('id')
         if not container_id:
             return
         return self.docker.get_container_logs(container_id)
