@@ -112,22 +112,10 @@ class DockerDriver(driver.ComputeDriver):
         hostname = socket.gethostname()
         memory = hostinfo.get_memory_usage()
         disk = hostinfo.get_disk_usage()
-        stats = {
-            'vcpus': 1,
-            'hypervisor_hostname': hostname,
-            'host_hostname': hostname,
-            'host_name_label': hostname,
-            'host_name-description': hostname,
-            'host_memory_total': memory['total'],
-            'host_memory_overhead': memory['used'],
-            'host_memory_free': memory['free'],
-            'host_memory_free_computed': memory['free'],
-            'host_other_config': {},
-            'host_cpu_info': {},
-            'disk_available': disk['available'],
-            'disk_total': disk['total'],
-            'disk_used': disk['used']
-        }
+        stats = self.get_available_resource(hostname)
+        stats['hypervisor_hostname'] = hostname
+        stats['host_hostname'] = hostname
+        stats['host_name_label'] = hostname
         return stats
 
     def get_available_resource(self, nodename):
@@ -137,10 +125,10 @@ class DockerDriver(driver.ComputeDriver):
             'vcpus': 1,
             'vcpus_used': 0,
             'memory_mb': memory['total'] / (1024 ** 2),
-            'local_gb': disk['total'] / (1024 ** 3),
             'memory_mb_used': memory['used'] / (1024 ** 2),
+            'local_gb': disk['total'] / (1024 ** 3),
             'local_gb_used': disk['used'] / (1024 ** 3),
-            'available_least': disk['available'] / (1024 ** 3),
+            'disk_available_least': disk['available'] / (1024 ** 3),
             'hypervisor_type': 'docker',
             'hypervisor_version': '1.0',
             'hypervisor_hostname': nodename,
