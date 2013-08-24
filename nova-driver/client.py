@@ -115,6 +115,10 @@ class MockClient(object):
         return True
 
     @filter_data
+    def inspect_image(self, image_name):
+        return {'container_config': {'Cmd': None}}
+
+    @filter_data
     def inspect_container(self, container_id):
         if container_id not in self._containers:
             return
@@ -224,13 +228,19 @@ class DockerHTTPClient(object):
 
     def make_request(self, *args, **kwargs):
         conn = UnixHTTPConnection(self._unix_socket)
+        headers = {}
+        if 'headers' in kwargs:
+            headers = kwargs['headers']
+        if 'Content-Type' not in headers:
+            headers['Content-Type'] = 'application/json'
+            kwargs['headers'] = headers
         conn.request(*args, **kwargs)
         return Response(conn.getresponse())
 
     def list_containers(self, _all=True):
         resp = self.make_request(
             'GET',
-            '/v1.3/containers/ps?all={0}&limit=50'.format(int(_all)))
+            '/v1.4/containers/ps?all={0}&limit=50'.format(int(_all)))
         return resp.json
 
     def create_container(self, args):
@@ -242,7 +252,7 @@ class DockerHTTPClient(object):
             'AttachStdin': False,
             'AttachStdout': False,
             'AttachStderr': False,
-            'PortSpecs': None,
+            'PortSpecs': [],
             'Tty': True,
             'OpenStdin': True,
             'StdinOnce': False,
@@ -251,14 +261,13 @@ class DockerHTTPClient(object):
             'Dns': None,
             'Image': 'ubuntu',
             'Volumes': {},
-            'VolumesFrom': ''
+            'VolumesFrom': '',
         }
         data.update(args)
         resp = self.make_request(
             'POST',
-            '/v1.3/containers/create',
-            body=json.dumps(data),
-            headers={'Content-Type': 'application/json'})
+            '/v1.4/containers/create',
+            body=json.dumps(data))
         if resp.code != 201:
             return
         obj = json.loads(resp.data)
@@ -269,13 +278,22 @@ class DockerHTTPClient(object):
     def start_container(self, container_id):
         resp = self.make_request(
             'POST',
-            '/v1.3/containers/{0}/start'.format(container_id))
+            '/v1.4/containers/{0}/start'.format(container_id),
+            body='{}')
         return (resp.code == 200)
+
+    def inspect_image(self, image_name):
+        resp = self.make_request(
+            'GET',
+            '/v1.4/images/{0}/json'.format(image_name))
+        if resp.code != 200:
+            return
+        return resp.json
 
     def inspect_container(self, container_id):
         resp = self.make_request(
             'GET',
-            '/v1.3/containers/{0}/json'.format(container_id))
+            '/v1.4/containers/{0}/json'.format(container_id))
         if resp.code != 200:
             return
         return resp.json
@@ -285,19 +303,19 @@ class DockerHTTPClient(object):
             timeout = 5
         resp = self.make_request(
             'POST',
-            '/v1.3/containers/{0}/stop?t={1}'.format(container_id, timeout))
+            '/v1.4/containers/{0}/stop?t={1}'.format(container_id, timeout))
         return (resp.code == 204)
 
     def destroy_container(self, container_id):
         resp = self.make_request(
             'DELETE',
-            '/v1.3/containers/{0}'.format(container_id))
+            '/v1.4/containers/{0}'.format(container_id))
         return (resp.code == 204)
 
     def pull_repository(self, name):
         resp = self.make_request(
             'POST',
-            '/v1.3/images/create?fromImage={0}'.format(name))
+            '/v1.4/images/create?fromImage={0}'.format(name))
         while True:
             buf = resp.read(1024)
             if not buf:
@@ -308,7 +326,7 @@ class DockerHTTPClient(object):
     def get_container_logs(self, container_id):
         resp = self.make_request(
             'POST',
-            ('/v1.3/containers/{0}/attach'
+            ('/v1.4/containers/{0}/attach'
              '?logs=1&stream=0&stdout=1&stderr=1').format(container_id))
         if resp.code != 200:
             return

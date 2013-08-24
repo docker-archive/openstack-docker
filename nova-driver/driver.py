@@ -29,6 +29,7 @@ from oslo.config import cfg
 
 from nova.compute import power_state
 from nova import exception
+from nova.image import glance
 from nova.openstack.common import log
 from nova import utils
 from nova.virt.docker import client
@@ -159,13 +160,19 @@ class DockerDriver(driver.ComputeDriver):
             time.sleep(0.5)
             n += 1
 
+    def _find_fixed_ip(self, subnets):
+        for subnet in subnets:
+            for ip in subnet['ips']:
+                if ip['type'] == 'fixed' and ip['address']:
+                    return ip['address']
+
     def _setup_network(self, instance, network_info):
         if self.fake is True or not network_info:
             return
         container_id = self.find_container_by_name(instance['name']).get('id')
         if not container_id:
             return
-        network_info = network_info[0]
+        network_info = network_info[0]['network']
         netns_path = '/var/run/netns'
         if not os.path.exists(netns_path):
             utils.execute(
@@ -183,8 +190,10 @@ class DockerDriver(driver.ComputeDriver):
         rand = random.randint(0, 100000)
         if_local_name = 'pvnetl{0}'.format(rand)
         if_remote_name = 'pvnetr{0}'.format(rand)
-        bridge = network_info[0]['bridge']
-        ip = network_info[1]['ips'][0]['ip']
+        bridge = network_info['bridge']
+        ip = self._find_fixed_ip(network_info['subnets'])
+        if not ip:
+            raise RuntimeError('Cannot set fixed ip')
         utils.execute(
             'ip', 'link', 'add', 'name', if_local_name, 'type',
             'veth', 'peer', 'name', if_remote_name,
@@ -203,19 +212,6 @@ class DockerDriver(driver.ComputeDriver):
             if_remote_name, ip,
             run_as_root=True)
 
-    def _parse_user_data(self, user_data):
-        data = {}
-        user_data = base64.b64decode(user_data)
-        for ln in user_data.split('\n'):
-            ln = ln.strip()
-            if not ln or ':' not in ln:
-                continue
-            if ln.startswith('#'):
-                continue
-            ln = ln.split(':', 1)
-            data[ln[0].strip()] = ln[1].strip('"\' ')
-        return data
-
     def _get_memory_limit_bytes(self, instance):
         for metadata in instance.get('system_metadata', []):
             if not metadata['deleted'] and \
@@ -223,23 +219,31 @@ class DockerDriver(driver.ComputeDriver):
                         return int(metadata['value']) * 1024 * 1024
         return 0
 
+    def _get_image_name(self, context, instance):
+        (image_service, image_id) = glance.get_remote_image_service(
+            context, instance['image_ref'])
+        image = image_service.show(context, image_id)
+        return image['name']
+
+    def _get_default_cmd(self, image_name):
+        default_cmd = ['sh']
+        info = self.docker.inspect_image(image_name)
+        if not info:
+            return default_cmd
+        if not info['container_config']['Cmd']:
+            return default_cmd
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
-        cmd = ['/bin/sh']
-        user_data = instance.get('user_data')
-        image_name = 'ubuntu'
-        if user_data:
-            user_data = self._parse_user_data(user_data)
-            if 'cmd' in user_data:
-                cmd = ['/bin/sh', '-c', user_data.get('cmd')]
-            if 'image' in user_data:
-                image_name = user_data.get('image')
+        image_name = self._get_image_name(context, instance)
         args = {
             'Hostname': instance['name'],
             'Image': image_name,
-            'Cmd': cmd,
             'Memory': self._get_memory_limit_bytes(instance)
         }
+        default_cmd = self._get_default_cmd(image_name)
+        if default_cmd:
+            args['Cmd'] = default_cmd
         container_id = self.docker.create_container(args)
         if container_id is None:
             LOG.info('Image name "{0}" does not exist, fetching it...'.format(
