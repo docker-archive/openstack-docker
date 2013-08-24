@@ -181,6 +181,9 @@ class MockClient(object):
             'malesuada fames ac ante ipsum primis in faucibus. ',
             'Fusce nec pellentesque nisl.'])
 
+    def get_registry_port(self):
+        return 5042
+
 
 class Response(object):
     def __init__(self, http_response, skip_body=False):
@@ -313,9 +316,11 @@ class DockerHTTPClient(object):
         return (resp.code == 204)
 
     def pull_repository(self, name):
-        resp = self.make_request(
-            'POST',
-            '/v1.4/images/create?fromImage={0}'.format(name))
+        parts = name.rsplit(':', 1)
+        url = '/v1.4/images/create?fromImage={0}'.format(parts[0])
+        if len(parts) > 1:
+            url += '&tag={0}'.format(parts[1])
+        resp = self.make_request('POST', url)
         while True:
             buf = resp.read(1024)
             if not buf:
@@ -331,3 +336,17 @@ class DockerHTTPClient(object):
         if resp.code != 200:
             return
         return resp.data
+
+    def get_registry_port(self):
+        registry = None
+        for container in self.list_containers(_all=False):
+            container = self.inspect_container(container['id'])
+            path = container['Path']
+            env = container['Config']['Env']
+            if 'docker-registry' in path:
+                registry = container
+                break
+        if not registry:
+            return
+        # The registry service always binds on port 5000 in the container.
+        return container['NetworkSettings']['PortMapping']['Tcp']['5000']
