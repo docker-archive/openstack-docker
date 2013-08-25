@@ -19,7 +19,6 @@
 A Docker Hypervisor which allows running Linux Containers instead of VMs.
 """
 
-import base64
 import os
 import random
 import socket
@@ -223,6 +222,11 @@ class DockerDriver(driver.ComputeDriver):
         (image_service, image_id) = glance.get_remote_image_service(
             context, instance['image_ref'])
         image = image_service.show(context, image_id)
+        fmt = image['container_format']
+        if fmt != 'docker':
+            raise exception.InstanceDeployFailure(
+                'Image container format not supported ({0})'.format(fmt),
+                instance_id=instance['name'])
         registry_port = self.docker.get_registry_port()
         return '{0}:{1}/{2}'.format(CONF.get('my_ip'),
                                     registry_port,
