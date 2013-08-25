@@ -28,7 +28,6 @@ from oslo.config import cfg
 
 from nova.compute import power_state
 from nova import exception
-from nova.image import glance
 from nova.openstack.common import log
 from nova import utils
 from nova.virt.docker import client
@@ -218,10 +217,7 @@ class DockerDriver(driver.ComputeDriver):
                         return int(metadata['value']) * 1024 * 1024
         return 0
 
-    def _get_image_name(self, context, instance):
-        (image_service, image_id) = glance.get_remote_image_service(
-            context, instance['image_ref'])
-        image = image_service.show(context, image_id)
+    def _get_image_name(self, context, instance, image):
         fmt = image['container_format']
         if fmt != 'docker':
             raise exception.InstanceDeployFailure(
@@ -242,7 +238,7 @@ class DockerDriver(driver.ComputeDriver):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
-        image_name = self._get_image_name(context, instance)
+        image_name = self._get_image_name(context, instance, image_meta)
         args = {
             'Hostname': instance['name'],
             'Image': image_name,
