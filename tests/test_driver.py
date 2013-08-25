@@ -17,10 +17,10 @@
 
 from nova import test
 from nova.tests import utils as test_utils
-from nova.tests.virt.test_virt_drivers import _VirtDriverTestCase
+from nova.tests.virt.test_virt_drivers import test_virt_drivers
 
 
-class DockerDriverTestCase(_VirtDriverTestCase, test.TestCase):
+class DockerDriverTestCase(test_virt_drivers._VirtDriverTestCase, test.TestCase):
     def setUp(self):
         # Point _VirtDriverTestCase at the right module
         self.driver_module = 'nova.virt.docker.DockerDriver'
