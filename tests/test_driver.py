@@ -28,6 +28,8 @@ class DockerDriverTestCase(test_virt_drivers._VirtDriverTestCase, test.TestCase)
         # Replace connection to Docker daemon with in-memory Mock object
         self.connection.use_mock_client()
 
+    #NOTE(bcwaldon): This exists only because _get_running_instance on the
+    # base class will not let us set a custom disk/container_format.
     def _get_running_instance(self):
         instance_ref = utils.get_test_instance()
         network_info = utils.get_test_network_info(legacy_model=False)
