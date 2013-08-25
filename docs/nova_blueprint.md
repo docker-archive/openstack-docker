@@ -152,7 +152,7 @@ mapped on 5042) will push the images to Glance. From there Nova can reach them
 and you can verify it with the glance cli.
 
 ```
-glance image-list
+$ glance image-list
 +--------------------------------------+---------------------------------+-------------+------------------+----------+--------+
 | ID                                   | Name                            | Disk Format | Container Format | Size     | Status |
 +--------------------------------------+---------------------------------+-------------+------------------+----------+--------+
