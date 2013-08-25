@@ -16,7 +16,7 @@
 #    under the License.
 
 from nova import test
-from nova.tests import utils as test_utils
+from nova.tests import utils
 from nova.tests.virt.test_virt_drivers import test_virt_drivers
 
 
@@ -29,11 +29,11 @@ class DockerDriverTestCase(test_virt_drivers._VirtDriverTestCase, test.TestCase)
         self.connection.use_mock_client()
 
     def _get_running_instance(self):
-        instance_ref = test_utils.get_test_instance()
-        network_info = test_utils.get_test_network_info(legacy_model=False)
+        instance_ref = utils.get_test_instance()
+        network_info = utils.get_test_network_info(legacy_model=False)
         network_info[0]['network']['subnets'][0]['meta']['dhcp_server'] = \
             '1.1.1.1'
-        image_info = test_utils.get_test_image_info(None, instance_ref)
+        image_info = utils.get_test_image_info(None, instance_ref)
         image_info['disk_format'] = 'raw'
         image_info['container_format'] = 'docker'
         self.connection.spawn(self.ctxt, instance_ref, image_info,
