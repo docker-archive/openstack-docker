@@ -21,9 +21,11 @@ from nova.tests.virt.test_virt_drivers import test_virt_drivers
 
 
 class DockerDriverTestCase(test_virt_drivers._VirtDriverTestCase, test.TestCase):
+
+    driver_module = 'nova.virt.docker.DockerDriver'
+    driver_args = [nova.tests.virt.docker.mock_client.MockClient,]
+
     def setUp(self):
-        # Point _VirtDriverTestCase at the right module
-        self.driver_module = 'nova.virt.docker.DockerDriver'
         super(DockerDriverTestCase, self).setUp()
         # Replace connection to Docker daemon with in-memory Mock object
         self.connection.use_mock_client()
