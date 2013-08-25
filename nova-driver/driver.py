@@ -30,7 +30,7 @@ from nova.compute import power_state
 from nova import exception
 from nova.openstack.common import log
 from nova import utils
-from nova.virt.docker import client
+import nova.virt.docker.client
 from nova.virt.docker import hostinfo
 from nova.virt import driver
 
@@ -49,16 +49,9 @@ class DockerDriver(driver.ComputeDriver):
 
     """Docker hypervisor driver."""
 
-    def __init__(self, virtapi, read_only=False):
+    def __init__(self, virtapi, client_class=None):
         super(DockerDriver, self).__init__(virtapi)
-        self.docker = client.DockerHTTPClient()
-        self.virtapi = virtapi
-        self.fake = False
-
-    def use_mock_client(self):
-        """Replace HTTP Client with the Mock one (useful for unit tests)."""
-        self.docker = client.MockClient()
-        self.fake = True
+        self.docker = (client_class or nova.virt.docker.client.DockerHTTPClient)()
 
     def init_host(self, host):
         if self.docker.is_daemon_running() is False:
@@ -165,7 +158,7 @@ class DockerDriver(driver.ComputeDriver):
                     return ip['address']
 
     def _setup_network(self, instance, network_info):
-        if self.fake is True or not network_info:
+        if not network_info:
             return
         container_id = self.find_container_by_name(instance['name']).get('id')
         if not container_id:

@@ -17,7 +17,8 @@
 
 from nova import test
 from nova.tests import utils
-from nova.tests.virt.test_virt_drivers import test_virt_drivers
+import nova.tests.virt.docker.mock_client
+from nova.tests.virt import test_virt_drivers
 
 
 class DockerDriverTestCase(test_virt_drivers._VirtDriverTestCase, test.TestCase):
@@ -27,8 +28,13 @@ class DockerDriverTestCase(test_virt_drivers._VirtDriverTestCase, test.TestCase)
 
     def setUp(self):
         super(DockerDriverTestCase, self).setUp()
-        # Replace connection to Docker daemon with in-memory Mock object
-        self.connection.use_mock_client()
+
+        def fake_setup_network(self, instance, network_info):
+            return
+
+        self.stubs.Set(nova.virt.docker.driver.DockerDriver,
+                       '_setup_network',
+                       fake_setup_network)
 
     #NOTE(bcwaldon): This exists only because _get_running_instance on the
     # base class will not let us set a custom disk/container_format.
