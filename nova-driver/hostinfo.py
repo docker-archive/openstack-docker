@@ -18,13 +18,22 @@
 import os
 
 
-def get_disk_usage():
-    # This is the location where Docker stores its containers. It's currently
-    # hardcoded in Docker so it's not configurable yet.
+def statvfs():
     docker_path = '/var/lib/docker'
     if not os.path.exists(docker_path):
         docker_path = '/'
-    st = os.statvfs(docker_path)
+    return os.statvfs(docker_path)
+
+
+def get_meminfo():
+    with open('/proc/meminfo') as f:
+        return f.readlines()
+
+
+def get_disk_usage():
+    # This is the location where Docker stores its containers. It's currently
+    # hardcoded in Docker so it's not configurable yet.
+    st = statvfs()
     return {
         'total': st.f_blocks * st.f_frsize,
         'available': st.f_bavail * st.f_frsize,
@@ -34,21 +43,20 @@ def get_disk_usage():
 
 def parse_meminfo():
     meminfo = {}
-    with open('/proc/meminfo') as f:
-        for ln in f:
-            parts = ln.split(':')
-            if len(parts) < 2:
-                continue
-            key = parts[0].lower()
-            value = parts[1].strip()
-            parts = value.split(' ')
-            value = parts[0]
-            if not value.isdigit():
-                continue
-            value = int(parts[0])
-            if len(parts) > 1 and parts[1] == 'kB':
-                value *= 1024
-            meminfo[key] = value
+    for ln in get_meminfo():
+        parts = ln.split(':')
+        if len(parts) < 2:
+            continue
+        key = parts[0].lower()
+        value = parts[1].strip()
+        parts = value.split(' ')
+        value = parts[0]
+        if not value.isdigit():
+            continue
+        value = int(parts[0])
+        if len(parts) > 1 and parts[1] == 'kB':
+            value *= 1024
+        meminfo[key] = value
     return meminfo
 
 
