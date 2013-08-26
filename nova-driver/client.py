@@ -82,7 +82,14 @@ class UnixHTTPConnection(httplib.HTTPConnection):
 
 class DockerHTTPClient(object):
     def __init__(self, connection=None):
-        self.connection = connection or UnixHTTPConnection()
+        self._connection = connection
+
+    @property
+    def connection(self):
+        if self._connection:
+            return self._connection
+        else:
+            return UnixHTTPConnection()
 
     def make_request(self, *args, **kwargs):
         headers = {}
