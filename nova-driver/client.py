@@ -200,17 +200,3 @@ class DockerHTTPClient(object):
         if resp.code != 200:
             return
         return resp.data
-
-    def get_registry_port(self):
-        registry = None
-        for container in self.list_containers(_all=False):
-            container = self.inspect_container(container['id'])
-            path = container['Path']
-            env = container['Config']['Env']
-            if 'docker-registry' in path:
-                registry = container
-                break
-        if not registry:
-            return
-        # The registry service always binds on port 5000 in the container.
-        return container['NetworkSettings']['PortMapping']['Tcp']['5000']

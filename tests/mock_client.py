@@ -133,9 +133,3 @@ class MockClient(object):
             'dapibus ornare massa. Nam ut hendrerit nunc. Interdum et ',
             'malesuada fames ac ante ipsum primis in faucibus. ',
             'Fusce nec pellentesque nisl.'])
-
-    def get_registry_port(self):
-        return 5042
-
-
-
