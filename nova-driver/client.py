@@ -155,9 +155,8 @@ class DockerHTTPClient(object):
             return
         return resp.json
 
-    def stop_container(self, container_id, timeout=None):
-        if timeout is None:
-            timeout = 5
+    def stop_container(self, container_id):
+        timeout = 5
         resp = self.make_request(
             'POST',
             '/v1.4/containers/{0}/stop?t={1}'.format(container_id, timeout))
