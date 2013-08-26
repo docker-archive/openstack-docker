@@ -86,13 +86,6 @@ class DockerHTTPClient(object):
             unix_socket = '/var/run/docker.sock'
         self._unix_socket = unix_socket
 
-    def is_daemon_running(self):
-        try:
-            self.list_containers()
-            return True
-        except socket.error:
-            return False
-
     def make_request(self, *args, **kwargs):
         conn = UnixHTTPConnection(self._unix_socket)
         headers = {}

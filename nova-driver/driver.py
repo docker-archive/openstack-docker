@@ -54,9 +54,16 @@ class DockerDriver(driver.ComputeDriver):
         self.docker = (client_class or nova.virt.docker.client.DockerHTTPClient)()
 
     def init_host(self, host):
-        if self.docker.is_daemon_running() is False:
+        if self.is_daemon_running() is False:
             raise exception.NovaException("Docker daemon is not running or is "
                     "not reachable (check the rights on /var/run/docker.sock)")
+
+    def is_daemon_running(self):
+        try:
+            self.docker.list_containers()
+            return True
+        except socket.error:
+            return False
 
     def list_instances(self, _inspect=False):
         res = []
