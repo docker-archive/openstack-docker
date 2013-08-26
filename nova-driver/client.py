@@ -70,9 +70,9 @@ class Response(object):
 
 
 class UnixHTTPConnection(httplib.HTTPConnection):
-    def __init__(self, unix_socket):
+    def __init__(self):
         httplib.HTTPConnection.__init__(self, 'localhost')
-        self.unix_socket = unix_socket
+        self.unix_socket = '/var/run/docker.sock'
 
     def connect(self):
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -81,21 +81,18 @@ class UnixHTTPConnection(httplib.HTTPConnection):
 
 
 class DockerHTTPClient(object):
-    def __init__(self, unix_socket=None):
-        if unix_socket is None:
-            unix_socket = '/var/run/docker.sock'
-        self._unix_socket = unix_socket
+    def __init__(self, connection=None):
+        self.connection = connection or UnixHTTPConnection()
 
     def make_request(self, *args, **kwargs):
-        conn = UnixHTTPConnection(self._unix_socket)
         headers = {}
         if 'headers' in kwargs:
             headers = kwargs['headers']
         if 'Content-Type' not in headers:
             headers['Content-Type'] = 'application/json'
             kwargs['headers'] = headers
-        conn.request(*args, **kwargs)
-        return Response(conn.getresponse())
+        self.connection.request(*args, **kwargs)
+        return Response(self.connection.getresponse())
 
     def list_containers(self, _all=True):
         resp = self.make_request(
