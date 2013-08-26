@@ -70,9 +70,9 @@ class Response(object):
 
 
 class UnixHTTPConnection(httplib.HTTPConnection):
-    def __init__(self, unix_socket):
+    def __init__(self):
         httplib.HTTPConnection.__init__(self, 'localhost')
-        self.unix_socket = unix_socket
+        self.unix_socket = '/var/run/docker.sock'
 
     def connect(self):
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -81,28 +81,25 @@ class UnixHTTPConnection(httplib.HTTPConnection):
 
 
 class DockerHTTPClient(object):
-    def __init__(self, unix_socket=None):
-        if unix_socket is None:
-            unix_socket = '/var/run/docker.sock'
-        self._unix_socket = unix_socket
+    def __init__(self, connection=None):
+        self._connection = connection
 
-    def is_daemon_running(self):
-        try:
-            self.list_containers()
-            return True
-        except socket.error:
-            return False
+    @property
+    def connection(self):
+        if self._connection:
+            return self._connection
+        else:
+            return UnixHTTPConnection()
 
     def make_request(self, *args, **kwargs):
-        conn = UnixHTTPConnection(self._unix_socket)
         headers = {}
         if 'headers' in kwargs:
             headers = kwargs['headers']
         if 'Content-Type' not in headers:
             headers['Content-Type'] = 'application/json'
             kwargs['headers'] = headers
-        conn.request(*args, **kwargs)
-        return Response(conn.getresponse())
+        self.connection.request(*args, **kwargs)
+        return Response(self.connection.getresponse())
 
     def list_containers(self, _all=True):
         resp = self.make_request(
@@ -165,9 +162,8 @@ class DockerHTTPClient(object):
             return
         return resp.json
 
-    def stop_container(self, container_id, timeout=None):
-        if timeout is None:
-            timeout = 5
+    def stop_container(self, container_id):
+        timeout = 5
         resp = self.make_request(
             'POST',
             '/v1.4/containers/{0}/stop?t={1}'.format(container_id, timeout))
@@ -186,6 +182,8 @@ class DockerHTTPClient(object):
             url += '&tag={0}'.format(parts[1])
         resp = self.make_request('POST', url)
         while True:
+            #NOTE(bcwaldon): This could cause an infinite loop. Determine a
+            # conditional that indicates improper behavior.
             buf = resp.read(1024)
             if not buf:
                 # Image pull completed
@@ -200,17 +198,3 @@ class DockerHTTPClient(object):
         if resp.code != 200:
             return
         return resp.data
-
-    def get_registry_port(self):
-        registry = None
-        for container in self.list_containers(_all=False):
-            container = self.inspect_container(container['id'])
-            path = container['Path']
-            env = container['Config']['Env']
-            if 'docker-registry' in path:
-                registry = container
-                break
-        if not registry:
-            return
-        # The registry service always binds on port 5000 in the container.
-        return container['NetworkSettings']['PortMapping']['Tcp']['5000']

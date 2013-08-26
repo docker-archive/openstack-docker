@@ -36,6 +36,13 @@ class DockerDriverTestCase(test_virt_drivers._VirtDriverTestCase, test.TestCase)
                        '_setup_network',
                        fake_setup_network)
 
+        def fake_get_registry_port(self):
+            return 5042
+
+        self.stubs.Set(nova.virt.docker.driver.DockerDriver,
+                       '_get_registry_port',
+                       fake_get_registry_port)
+
     #NOTE(bcwaldon): This exists only because _get_running_instance on the
     # base class will not let us set a custom disk/container_format.
     def _get_running_instance(self):

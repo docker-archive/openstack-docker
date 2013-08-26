@@ -54,9 +54,16 @@ class DockerDriver(driver.ComputeDriver):
         self.docker = (client_class or nova.virt.docker.client.DockerHTTPClient)()
 
     def init_host(self, host):
-        if self.docker.is_daemon_running() is False:
+        if self.is_daemon_running() is False:
             raise exception.NovaException("Docker daemon is not running or is "
                     "not reachable (check the rights on /var/run/docker.sock)")
+
+    def is_daemon_running(self):
+        try:
+            self.docker.list_containers()
+            return True
+        except socket.error:
+            return False
 
     def list_instances(self, _inspect=False):
         res = []
@@ -216,7 +223,7 @@ class DockerDriver(driver.ComputeDriver):
             raise exception.InstanceDeployFailure(
                 'Image container format not supported ({0})'.format(fmt),
                 instance_id=instance['name'])
-        registry_port = self.docker.get_registry_port()
+        registry_port = self._get_registry_port()
         return '{0}:{1}/{2}'.format(CONF.get('my_ip'),
                                     registry_port,
                                     image['name'])
@@ -295,3 +302,15 @@ class DockerDriver(driver.ComputeDriver):
         if not container_id:
             return
         return self.docker.get_container_logs(container_id)
+
+    def _get_registry_port(self):
+        registry = None
+        for container in self.docker.list_containers(_all=False):
+            container = self.docker.inspect_container(container['id'])
+            if 'docker-registry' in container['Path']:
+                registry = container
+                break
+        if not registry:
+            return
+        # The registry service always binds on port 5000 in the container.
+        return container['NetworkSettings']['PortMapping']['Tcp']['5000']
