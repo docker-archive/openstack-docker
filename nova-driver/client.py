@@ -93,13 +93,14 @@ class DockerHTTPClient(object):
 
     def make_request(self, *args, **kwargs):
         headers = {}
-        if 'headers' in kwargs:
+        if 'headers' in kwargs and kwargs['headers']:
             headers = kwargs['headers']
         if 'Content-Type' not in headers:
             headers['Content-Type'] = 'application/json'
             kwargs['headers'] = headers
-        self.connection.request(*args, **kwargs)
-        return Response(self.connection.getresponse())
+        conn = self.connection
+        conn.request(*args, **kwargs)
+        return Response(conn.getresponse())
 
     def list_containers(self, _all=True):
         resp = self.make_request(
@@ -182,13 +183,34 @@ class DockerHTTPClient(object):
             url += '&tag={0}'.format(parts[1])
         resp = self.make_request('POST', url)
         while True:
-            #NOTE(bcwaldon): This could cause an infinite loop. Determine a
-            # conditional that indicates improper behavior.
             buf = resp.read(1024)
             if not buf:
                 # Image pull completed
                 break
         return (resp.code == 200)
+
+    def push_repository(self, name, headers=None):
+        url = '/v1.4/images/{0}/push'.format(name)
+        # NOTE(samalba): docker requires the credentials fields even if
+        # they're not needed here.
+        body = ('{"username":"foo","password":"bar",'
+                '"auth":"","email":"foo@bar.bar"}')
+        resp = self.make_request('POST', url, headers=headers, body=body)
+        while True:
+            buf = resp.read(1024)
+            if not buf:
+                # Image push completed
+                break
+        return (resp.code == 200)
+
+    def commit_container(self, container_id, name):
+        parts = name.rsplit(':', 1)
+        url = '/v1.4/commit?container={0}&repo={1}'.format(container_id,
+                                                           parts[0])
+        if len(parts) > 1:
+            url += '&tag={0}'.format(parts[1])
+        resp = self.make_request('POST', url)
+        return (resp.code == 201)
 
     def get_container_logs(self, container_id):
         resp = self.make_request(

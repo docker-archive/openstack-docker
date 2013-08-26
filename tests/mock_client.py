@@ -118,6 +118,14 @@ class MockClient(object):
     def pull_repository(self, name):
         return True
 
+    def push_repository(self, name, headers=None):
+        return True
+
+    def commit_container(self, container_id, name):
+        if container_id not in self._containers:
+            return False
+        return True
+
     def get_container_logs(self, container_id):
         if container_id not in self._containers:
             return False

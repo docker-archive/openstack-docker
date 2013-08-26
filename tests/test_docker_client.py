@@ -382,6 +382,78 @@ class DockerHTTPClientTestCase(test.TestCase):
 
         self.mox.VerifyAll()
 
+
+    def test_push_repository(self):
+        mock_conn = self.mox.CreateMockAnything()
+
+        body = ('{"username":"foo","password":"bar",'
+                '"auth":"","email":"foo@bar.bar"}')
+        mock_conn.request('POST', '/v1.4/images/ping/push',
+                          headers={'Content-Type': 'application/json'},
+                          body=body)
+        response = FakeResponse(200,
+                                headers={'Content-Type': 'application/json'})
+        mock_conn.getresponse().AndReturn(response)
+
+        self.mox.ReplayAll()
+
+        client = nova.virt.docker.client.DockerHTTPClient(mock_conn)
+        self.assertEqual(True, client.push_repository('ping'))
+
+        self.mox.VerifyAll()
+
+    def test_push_repository_bad_return_code(self):
+        mock_conn = self.mox.CreateMockAnything()
+
+        body = ('{"username":"foo","password":"bar",'
+                '"auth":"","email":"foo@bar.bar"}')
+        mock_conn.request('POST', '/v1.4/images/ping/push',
+                          headers={'Content-Type': 'application/json'},
+                          body=body)
+        response = FakeResponse(400,
+                                headers={'Content-Type': 'application/json'})
+        mock_conn.getresponse().AndReturn(response)
+
+        self.mox.ReplayAll()
+
+        client = nova.virt.docker.client.DockerHTTPClient(mock_conn)
+        self.assertEqual(False, client.push_repository('ping'))
+
+        self.mox.VerifyAll()
+
+
+    def test_commit_container(self):
+        mock_conn = self.mox.CreateMockAnything()
+
+        mock_conn.request('POST', '/v1.4/commit?container=XXX&repo=ping',
+                          headers={'Content-Type': 'application/json'})
+        response = FakeResponse(201,
+                                headers={'Content-Type': 'application/json'})
+        mock_conn.getresponse().AndReturn(response)
+
+        self.mox.ReplayAll()
+
+        client = nova.virt.docker.client.DockerHTTPClient(mock_conn)
+        self.assertEqual(True, client.commit_container('XXX', 'ping'))
+
+        self.mox.VerifyAll()
+
+    def test_commit_container_bad_return_code(self):
+        mock_conn = self.mox.CreateMockAnything()
+
+        mock_conn.request('POST', '/v1.4/commit?container=XXX&repo=ping',
+                          headers={'Content-Type': 'application/json'})
+        response = FakeResponse(400,
+                                headers={'Content-Type': 'application/json'})
+        mock_conn.getresponse().AndReturn(response)
+
+        self.mox.ReplayAll()
+
+        client = nova.virt.docker.client.DockerHTTPClient(mock_conn)
+        self.assertEqual(False, client.commit_container('XXX', 'ping'))
+
+        self.mox.VerifyAll()
+
     def test_get_container_logs(self):
         mock_conn = self.mox.CreateMockAnything()
 

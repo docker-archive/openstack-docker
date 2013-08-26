@@ -27,7 +27,9 @@ import time
 from oslo.config import cfg
 
 from nova.compute import power_state
+from nova.compute import task_states
 from nova import exception
+from nova.image import glance
 from nova.openstack.common import log
 from nova import utils
 import nova.virt.docker.client
@@ -49,9 +51,15 @@ class DockerDriver(driver.ComputeDriver):
 
     """Docker hypervisor driver."""
 
-    def __init__(self, virtapi, client_class=None):
+    def __init__(self, virtapi):
         super(DockerDriver, self).__init__(virtapi)
-        self.docker = (client_class or nova.virt.docker.client.DockerHTTPClient)()
+        self._docker = None
+
+    @property
+    def docker(self):
+        if self._docker is None:
+            self._docker = nova.virt.docker.client.DockerHTTPClient()
+        return self._docker
 
     def init_host(self, host):
         if self.is_daemon_running() is False:
@@ -304,6 +312,7 @@ class DockerDriver(driver.ComputeDriver):
         return self.docker.get_container_logs(container_id)
 
     def _get_registry_port(self):
+        default_port = 5042
         registry = None
         for container in self.docker.list_containers(_all=False):
             container = self.docker.inspect_container(container['id'])
@@ -311,6 +320,30 @@ class DockerDriver(driver.ComputeDriver):
                 registry = container
                 break
         if not registry:
-            return
+            return default_port
         # The registry service always binds on port 5000 in the container.
-        return container['NetworkSettings']['PortMapping']['Tcp']['5000']
+        try:
+            return container['NetworkSettings']['PortMapping']['Tcp']['5000']
+        except (KeyError, TypeError):
+            return default_port
+
+    def snapshot(self, context, instance, image_href, update_task_state):
+        container_id = self.find_container_by_name(instance['name']).get('id')
+        if not container_id:
+            raise exception.InstanceNotRunning(instance_id=instance['name'])
+        update_task_state(task_state=task_states.IMAGE_PENDING_UPLOAD)
+        (image_service, image_id) = glance.get_remote_image_service(
+            context, image_href)
+        image = image_service.show(context, image_id)
+        registry_port = self._get_registry_port()
+        name = image['name']
+        default_tag = (':' not in name)
+        name = '{0}:{1}/{2}'.format(CONF.get('my_ip'),
+                                    registry_port,
+                                    name)
+        commit_name = name if not default_tag else name + ':latest'
+        self.docker.commit_container(container_id, commit_name)
+        update_task_state(task_state=task_states.IMAGE_UPLOADING,
+                          expected_state=task_states.IMAGE_PENDING_UPLOAD)
+        headers = {'X-Meta-Glance-Image-Id': image_href}
+        self.docker.push_repository(name, headers=headers)

@@ -24,10 +24,13 @@ from nova.tests.virt import test_virt_drivers
 class DockerDriverTestCase(test_virt_drivers._VirtDriverTestCase, test.TestCase):
 
     driver_module = 'nova.virt.docker.DockerDriver'
-    driver_args = [nova.tests.virt.docker.mock_client.MockClient,]
 
     def setUp(self):
         super(DockerDriverTestCase, self).setUp()
+
+        self.stubs.Set(nova.virt.docker.driver.DockerDriver,
+                       'docker',
+                       nova.tests.virt.docker.mock_client.MockClient())
 
         def fake_setup_network(self, instance, network_info):
             return
