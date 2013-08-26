@@ -175,6 +175,8 @@ class DockerHTTPClient(object):
             url += '&tag={0}'.format(parts[1])
         resp = self.make_request('POST', url)
         while True:
+            #NOTE(bcwaldon): This could cause an infinite loop. Determine a
+            # conditional that indicates improper behavior.
             buf = resp.read(1024)
             if not buf:
                 # Image pull completed
