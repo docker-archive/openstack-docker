@@ -57,12 +57,10 @@ sudo docker -d &
 git clone git://github.com/openstack-dev/devstack.git
 cd devstack; ./stack.sh
 
-# Install OpenStack-Docker Nova Driver and Glance Backend
-git clone git://github.com/dotcloud/openstack-docker.git
-cd openstack-docker && sudo ./setup_on_devstack.sh
-
-# Restart glance-registry and nova-compute from the devstack screen
-screen -rd
+# Install OpenStack-Docker Nova Driver
+# Go to https://review.openstack.org/#/c/40759/
+# Follow the instructions to get the last patchset
+# NOTE: This won't be needed anymore as soon as this review is merged
 ```
 
 That's it!
@@ -90,43 +88,155 @@ Note: that you can use the "cmd" field to spawn anything more useful such as
 a opensshd or an apache daemon.
 
 
-What's Under The Hood?
-----------------------
+How the Docker driver works?
+----------------------------
 
-Docker exposes a REST API. The driver talks to this REST API.
+The Nova driver embeds a tiny HTTP client which talks with the Docker internal
+Rest API through a unix socket. It uses the API to control containers and fetch
+information about them.
 
-When you create an instance, a new container is created. That's pretty much it!
-
-If you know Docker and Nova concepts, there are two useful technical bits of info:
-
-- Glance exposes Docker's images but does not store anything (this work is still
-  done by Docker itself).
-- Both Docker and Nova allocate IP addresses for the containers. So in fact, each
-  container will end up having two IP addresses: one allocated by docker, on `eth0`;
-  and another one allocated by Nova, on `eth1`. If it's deemed necessary, a future
-  version might simplify this and make only one interface visible in containers.
-  This is open to discussion.
+By using an embbeded registry[1], Docker can push and pull images into Glance.
+The registry usually lives in a container (see the DevStack support[2]).
 
 
-Can I Use It In Production?
----------------------------
+How to use it?
+--------------
 
-Not yet! The next step is to get some feedback from the OpenStack community.
-This is our first OpenStack integration, so it would be surprising if we got
-everything right on the first try :-)
-
-Also, Docker itself is not yet production-ready. But it's maturing quickly!
-
-
-Run Nova unit tests
--------------------
-
-The Nova driver implements a Mock Docker client that allows to use it in
-"Fake mode" for unit testing.
-
-From Nova main repository, you can use those unit tests by running:
+Once you configured Nova to use the docker driver, the flow is the same as any
+other driver.
 
 ```
-./run_tests.sh --virtual-env-path ~/.virtualenvs/ --virtual-env-name nova nova.tests.virt.test_virt_drivers.DockerDriverTestCase
+$ glance image-list
++--------------------------------------+---------------------------------+-------------+------------------+----------+--------+
+| ID                                   | Name                            | Disk Format | Container Format | Size     | Status |
++--------------------------------------+---------------------------------+-------------+------------------+----------+--------+
+| f5049d8b-93cf-49ab-af56-e70d89da4cf4 | cirros-0.3.1-x86_64-uec         | ami         | ami              | 25165824 | active |
+| 0f1ec86c-157f-4f22-9889-c07cf7bb601c | cirros-0.3.1-x86_64-uec-kernel  | aki         | aki              | 4955792  | active |
+| 03a54807-2e35-4864-a337-458c3eeb77e6 | cirros-0.3.1-x86_64-uec-ramdisk | ari         | ari              | 3714968  | active |
+| 77083f3c-d320-46e3-bcba-0cb4f5a55e7b | docker-busybox:latest           | raw         | docker           | 2271596  | active |
++--------------------------------------+---------------------------------+-------------+------------------+----------+--------+
 ```
 
+Only images with a "docker" container format will be bootable. The image
+contains basically a tarball of the container filesystem.
+
+NOTE: Docker supports inheritance between images, so it's possible to have
+several "docker" images without a name (None). It's usually an image
+dependence. These images are bootable as well, the filesystem will basically
+have a previous state. But it's probably not what you want to use in the first
+place.
+
+It's recommended to add new images to Glance by using Docker. For instance,
+here is how you can fetch images from the public registry and push them back
+to Glance in order to boot a Nova instance with it:
+
+```
+$ docker search hipache
+Found 3 results matching your query ("hipache")
+NAME                             DESCRIPTION
+samalba/hipache                  https://github.com/dotcloud/hipache
+```
+
+Then, tag the image with the docker-registry location and push it.
+
+```
+$ docker tag samalba/hipache 10.0.2.15:5042/hipache
+$ docker push samalba/hipache 10.0.2.15:5042/hipache
+The push refers to a repository [10.0.2.15:5042/hipache] (len: 1)
+Sending image list
+Pushing repository 10.0.2.15:5042/hipache (1 tags)
+Push 100% complete
+```
+
+Note that "10.0.2.15" is the IP address of my host, it would definitely work
+with "localhost" since my docker-registry is inside a container (however the
+port is important).
+
+In this case, the docker-registry (running in a docker container with a port
+mapped on 5042) will push the images to Glance. From there Nova can reach them
+and you can verify it with the glance cli.
+
+```
+$ glance image-list
++--------------------------------------+---------------------------------+-------------+------------------+----------+--------+
+| ID                                   | Name                            | Disk Format | Container Format | Size     | Status |
++--------------------------------------+---------------------------------+-------------+------------------+----------+--------+
+| f5049d8b-93cf-49ab-af56-e70d89da4cf4 | cirros-0.3.1-x86_64-uec         | ami         | ami              | 25165824 | active |
+| 0f1ec86c-157f-4f22-9889-c07cf7bb601c | cirros-0.3.1-x86_64-uec-kernel  | aki         | aki              | 4955792  | active |
+| 03a54807-2e35-4864-a337-458c3eeb77e6 | cirros-0.3.1-x86_64-uec-ramdisk | ari         | ari              | 3714968  | active |
+| 77083f3c-d320-46e3-bcba-0cb4f5a55e7b | docker-busybox:latest           | raw         | docker           | 2271596  | active |
+| 998f52ba-fe03-46b0-b5a6-4b5f29427bcb | hipache:latest                  | raw         | docker           | 486      | active |
++--------------------------------------+---------------------------------+-------------+------------------+----------+--------+
+```
+
+You can obviously boot instances from nova cli:
+
+```
+$ nova boot --image "docker-busybox:latest" --flavor m1.tiny test
++--------------------------------------+--------------------------------------+
+| Property                             | Value                                |
++--------------------------------------+--------------------------------------+
+| OS-EXT-STS:task_state                | scheduling                           |
+| image                                | docker-busybox:latest                |
+| OS-EXT-STS:vm_state                  | building                             |
+| OS-EXT-SRV-ATTR:instance_name        | instance-0000002d                    |
+| OS-SRV-USG:launched_at               | None                                 |
+| flavor                               | m1.micro                             |
+| id                                   | 31086c50-f937-4f80-9790-045096ecb32c |
+| security_groups                      | [{u'name': u'default'}]              |
+| user_id                              | 1a3eed38d1344e869dd019b3636db12b     |
+| OS-DCF:diskConfig                    | MANUAL                               |
+| accessIPv4                           |                                      |
+| accessIPv6                           |                                      |
+| progress                             | 0                                    |
+| OS-EXT-STS:power_state               | 0                                    |
+| OS-EXT-AZ:availability_zone          | nova                                 |
+| config_drive                         |                                      |
+| status                               | BUILD                                |
+| updated                              | 2013-08-25T00:22:32Z                 |
+| hostId                               |                                      |
+| OS-EXT-SRV-ATTR:host                 | None                                 |
+| OS-SRV-USG:terminated_at             | None                                 |
+| key_name                             | None                                 |
+| OS-EXT-SRV-ATTR:hypervisor_hostname  | None                                 |
+| name                                 | test                                 |
+| adminPass                            | QwczSPAAT6Mm                         |
+| tenant_id                            | 183a9b7ed7c6465f97387458d693ca4c     |
+| created                              | 2013-08-25T00:22:31Z                 |
+| os-extended-volumes:volumes_attached | []                                   |
+| metadata                             | {}                                   |
++--------------------------------------+--------------------------------------+
+```
+
+Once the instance is booted:
+
+```
+$ nova list
++--------------------------------------+------+--------+------------+-------------+------------------+
+| ID                                   | Name | Status | Task State | Power State | Networks         |
++--------------------------------------+------+--------+------------+-------------+------------------+
+| 31086c50-f937-4f80-9790-045096ecb32c | test | ACTIVE | None       | Running     | private=10.0.0.2 |
++--------------------------------------+------+--------+------------+-------------+------------------+
+```
+
+You can also see the corresponding container on docker:
+
+```
+$ docker ps
+docker ps
+ID              IMAGE                                  COMMAND      CREATED             STATUS          PORTS
+f337c7fec5ff    10.0.2.15:5042/docker-busybox:latest   sh           10 seconds ago      Up 10 seconds
+```
+
+The command used here is the one configured in the image. Each container image
+can have a command configured for the run. The driver does not override this.
+You can image booting an apache2 instance, it will start the apache process
+if the image is authored properly via a Dockerfile[3].
+
+
+References
+----------
+
+1. https://github.com/dotcloud/docker-registry
+2. https://review.openstack.org/#/c/40759/
+3. http://docs.docker.io/en/latest/use/builder/
