@@ -73,7 +73,7 @@ class DockerHTTPClientTestCase(test.TestCase):
             'Env': None,
             'Cmd': [],
             'Dns': None,
-            'Image': 'ubuntu',
+            'Image': None,
             'Volumes': {},
             'VolumesFrom': '',
         })
