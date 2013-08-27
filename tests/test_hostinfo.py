@@ -15,9 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import os
 import posix
-import StringIO
 
 from nova import test
 from nova.virt.docker import hostinfo

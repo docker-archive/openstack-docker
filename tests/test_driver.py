@@ -18,10 +18,10 @@
 from nova import test
 from nova.tests import utils
 import nova.tests.virt.docker.mock_client
-from nova.tests.virt import test_virt_drivers
+from nova.tests.virt.test_virt_drivers import _VirtDriverTestCase
 
 
-class DockerDriverTestCase(test_virt_drivers._VirtDriverTestCase, test.TestCase):
+class DockerDriverTestCase(_VirtDriverTestCase, test.TestCase):
 
     driver_module = 'nova.virt.docker.DockerDriver'
 

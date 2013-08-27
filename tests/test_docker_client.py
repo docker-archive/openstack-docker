@@ -382,7 +382,6 @@ class DockerHTTPClientTestCase(test.TestCase):
 
         self.mox.VerifyAll()
 
-
     def test_push_repository(self):
         mock_conn = self.mox.CreateMockAnything()
 
@@ -420,7 +419,6 @@ class DockerHTTPClientTestCase(test.TestCase):
         self.assertEqual(False, client.push_repository('ping'))
 
         self.mox.VerifyAll()
-
 
     def test_commit_container(self):
         mock_conn = self.mox.CreateMockAnything()
