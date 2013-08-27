@@ -124,7 +124,7 @@ class DockerHTTPClient(object):
             'Env': None,
             'Cmd': [],
             'Dns': None,
-            'Image': 'ubuntu',
+            'Image': None,
             'Volumes': {},
             'VolumesFrom': '',
         }
