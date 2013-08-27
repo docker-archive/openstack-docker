@@ -38,9 +38,6 @@ class FakeResponse(object):
 
 class DockerHTTPClientTestCase(test.TestCase):
 
-    def setUp(self):
-        super(DockerHTTPClientTestCase, self).setUp()
-
     def test_list_containers(self):
         mock_conn = self.mox.CreateMockAnything()
 
