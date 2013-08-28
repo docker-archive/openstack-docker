@@ -1,4 +1,4 @@
-# nova-rootwrap command filters for network nodes
+# nova-rootwrap command filters for setting up network in the docker driver
 # This file should be owned by (and only-writeable by) the root user
 
 [Filters]

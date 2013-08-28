@@ -16,9 +16,10 @@
 #    under the License.
 
 import functools
-import httplib
 import json
 import socket
+
+from eventlet.green import httplib
 
 from nova.openstack.common import log as logging
 

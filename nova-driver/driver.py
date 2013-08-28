@@ -30,6 +30,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova import exception
 from nova.image import glance
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log
 from nova import utils
 import nova.virt.docker.client
@@ -37,19 +38,26 @@ from nova.virt.docker import hostinfo
 from nova.virt import driver
 
 
+docker_opts = [
+    cfg.StrOpt('docker_registry_default_port',
+           default=5042,
+           help='Default TCP port to find the docker-registry container')
+    ]
+
 CONF = cfg.CONF
-CONF.import_opt('host', 'nova.netconf')
+CONF.register_opts(docker_opts)
+CONF.import_opt('my_ip', 'nova.netconf')
 
 LOG = log.getLogger(__name__)
 
 
 class DockerDriver(driver.ComputeDriver):
+    """Docker hypervisor driver."""
+
     capabilities = {
         'has_imagecache': True,
         'supports_recreate': True,
     }
-
-    """Docker hypervisor driver."""
 
     def __init__(self, virtapi):
         super(DockerDriver, self).__init__(virtapi)
@@ -63,8 +71,8 @@ class DockerDriver(driver.ComputeDriver):
 
     def init_host(self, host):
         if self.is_daemon_running() is False:
-            raise exception.NovaException("Docker daemon is not running or is "
-                    "not reachable (check the rights on /var/run/docker.sock)")
+            raise exception.NovaException(_("Docker daemon is not running or "
+                "is not reachable (check the rights on /var/run/docker.sock)"))
 
     def is_daemon_running(self):
         try:
@@ -73,18 +81,15 @@ class DockerDriver(driver.ComputeDriver):
         except socket.error:
             return False
 
-    def list_instances(self, _inspect=False):
+    def list_instances(self, inspect=False):
         res = []
         for container in self.docker.list_containers():
             info = self.docker.inspect_container(container['id'])
-            if _inspect:
+            if inspect:
                 res.append(info)
             else:
                 res.append(info['Config'].get('Hostname'))
         return res
-
-    def legacy_nwinfo(self):
-        return True
 
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""
@@ -95,7 +100,7 @@ class DockerDriver(driver.ComputeDriver):
         pass
 
     def find_container_by_name(self, name):
-        for info in self.list_instances(_inspect=True):
+        for info in self.list_instances(inspect=True):
             if info['Config'].get('Hostname') == name:
                 return info
         return {}
@@ -185,9 +190,9 @@ class DockerDriver(driver.ComputeDriver):
                 'mkdir', '-p', netns_path, run_as_root=True)
         nspid = self._find_container_pid(container_id)
         if not nspid:
-            raise RuntimeError(
+            raise RuntimeError(_(
                 'Cannot find any PID under '
-                'container "{0}"'.format(container_id))
+                'container "{0}"'.format(container_id)))
         netns_path = os.path.join(netns_path, container_id)
         utils.execute(
             'ln', '-sf', '/proc/{0}/ns/net'.format(nspid),
@@ -199,7 +204,7 @@ class DockerDriver(driver.ComputeDriver):
         bridge = network_info['bridge']
         ip = self._find_fixed_ip(network_info['subnets'])
         if not ip:
-            raise RuntimeError('Cannot set fixed ip')
+            raise RuntimeError(_('Cannot set fixed ip'))
         utils.execute(
             'ip', 'link', 'add', 'name', if_local_name, 'type',
             'veth', 'peer', 'name', if_remote_name,
@@ -220,19 +225,20 @@ class DockerDriver(driver.ComputeDriver):
 
     def _get_memory_limit_bytes(self, instance):
         for metadata in instance.get('system_metadata', []):
-            if not metadata['deleted'] and \
-                    metadata['key'] == 'instance_type_memory_mb':
-                        return int(metadata['value']) * 1024 * 1024
+            if metadata['deleted']:
+                continue
+            if metadata['key'] == 'instance_type_memory_mb':
+                return int(metadata['value']) * 1024 * 1024
         return 0
 
     def _get_image_name(self, context, instance, image):
         fmt = image['container_format']
         if fmt != 'docker':
-            raise exception.InstanceDeployFailure(
-                'Image container format not supported ({0})'.format(fmt),
+            raise exception.InstanceDeployFailure(_(
+                'Image container format not supported ({0})'.format(fmt)),
                 instance_id=instance['name'])
         registry_port = self._get_registry_port()
-        return '{0}:{1}/{2}'.format(CONF.get('my_ip'),
+        return '{0}:{1}/{2}'.format(CONF.my_ip,
                                     registry_port,
                                     image['name'])
 
@@ -256,25 +262,25 @@ class DockerDriver(driver.ComputeDriver):
         if default_cmd:
             args['Cmd'] = default_cmd
         container_id = self.docker.create_container(args)
-        if container_id is None:
-            LOG.info('Image name "{0}" does not exist, fetching it...'.format(
-                image_name))
+        if not container_id:
+            LOG.info(_('Image name "{0}" does not exist, '
+                'fetching it...'.format(image_name)))
             res = self.docker.pull_repository(image_name)
             if res is False:
                 raise exception.InstanceDeployFailure(
-                    'Cannot pull missing image',
+                    _('Cannot pull missing image'),
                     instance_id=instance['name'])
             container_id = self.docker.create_container(args)
-            if container_id is None:
+            if not container_id:
                 raise exception.InstanceDeployFailure(
-                    'Cannot create container',
+                    _('Cannot create container'),
                     instance_id=instance['name'])
         self.docker.start_container(container_id)
         try:
             self._setup_network(instance, network_info)
         except Exception as e:
             raise exception.InstanceDeployFailure(
-                'Cannot setup network: {0}'.format(e),
+                _('Cannot setup network: {0}'.format(e)),
                 instance_id=instance['name'])
 
     def destroy(self, instance, network_info, block_device_info=None,
@@ -312,7 +318,7 @@ class DockerDriver(driver.ComputeDriver):
         return self.docker.get_container_logs(container_id)
 
     def _get_registry_port(self):
-        default_port = 5042
+        default_port = CONF.docker_registry_default_port
         registry = None
         for container in self.docker.list_containers(_all=False):
             container = self.docker.inspect_container(container['id'])
@@ -321,16 +327,19 @@ class DockerDriver(driver.ComputeDriver):
                 break
         if not registry:
             return default_port
-        # The registry service always binds on port 5000 in the container.
+        # NOTE(samalba): The registry service always binds on port 5000 in the
+        # container
         try:
             return container['NetworkSettings']['PortMapping']['Tcp']['5000']
         except (KeyError, TypeError):
+            # NOTE(samalba): Falling back to a default port allows more
+            # flexibility (run docker-registry outside a container)
             return default_port
 
     def snapshot(self, context, instance, image_href, update_task_state):
         container_id = self.find_container_by_name(instance['name']).get('id')
         if not container_id:
-            raise exception.InstanceNotRunning(instance_id=instance['name'])
+            raise exception.InstanceNotRunning(instance_id=instance['uuid'])
         update_task_state(task_state=task_states.IMAGE_PENDING_UPLOAD)
         (image_service, image_id) = glance.get_remote_image_service(
             context, image_href)
@@ -338,7 +347,7 @@ class DockerDriver(driver.ComputeDriver):
         registry_port = self._get_registry_port()
         name = image['name']
         default_tag = (':' not in name)
-        name = '{0}:{1}/{2}'.format(CONF.get('my_ip'),
+        name = '{0}:{1}/{2}'.format(CONF.my_ip,
                                     registry_port,
                                     name)
         commit_name = name if not default_tag else name + ':latest'

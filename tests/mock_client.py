@@ -38,7 +38,7 @@ class MockClient(object):
     @nova.virt.docker.client.filter_data
     def list_containers(self, _all=True):
         containers = []
-        for container_id, container in self._containers.iteritems():
+        for container_id in self._containers.iterkeys():
             containers.append({
                 'Status': 'Exit 0',
                 'Created': int(time.time()),
