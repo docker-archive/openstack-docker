@@ -15,9 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import random
-import string
 import time
+import uuid
 
 from nova.openstack.common import timeutils
 import nova.virt.docker.client
@@ -28,9 +27,7 @@ class MockClient(object):
         self._containers = {}
 
     def _fake_id(self):
-        return ''.join(
-            random.choice(string.ascii_lowercase + string.digits)
-            for x in range(64))
+        return uuid.uuid4().hex + uuid.uuid4().hex
 
     def is_daemon_running(self):
         return True

@@ -73,8 +73,8 @@ class DockerDriver(driver.ComputeDriver):
 
     def init_host(self, host):
         if self.is_daemon_running() is False:
-            raise exception.NovaException(_("Docker daemon is not running or "
-                "is not reachable (check the rights on /var/run/docker.sock)"))
+            raise exception.NovaException(_('Docker daemon is not running or '
+                'is not reachable (check the rights on /var/run/docker.sock)'))
 
     def is_daemon_running(self):
         try:
@@ -165,6 +165,10 @@ class DockerDriver(driver.ComputeDriver):
         tasks_path = os.path.join(lxc_path, container_id, 'tasks')
         n = 0
         while True:
+            # NOTE(samalba): We wait for the process to be spawned inside the
+            # container in order to get the the "container pid". This is
+            # usually really fast. To avoid race conditions on a slow
+            # machine, we allow 10 seconds as a hard limit.
             if n > 20:
                 return
             try:
@@ -210,23 +214,32 @@ class DockerDriver(driver.ComputeDriver):
         ip = self._find_fixed_ip(network_info['subnets'])
         if not ip:
             raise RuntimeError(_('Cannot set fixed ip'))
-        utils.execute(
-            'ip', 'link', 'add', 'name', if_local_name, 'type',
-            'veth', 'peer', 'name', if_remote_name,
-            run_as_root=True)
-        utils.execute(
-            'brctl', 'addif', bridge, if_local_name,
-            run_as_root=True)
-        utils.execute(
-            'ip', 'link', 'set', if_local_name, 'up',
-            run_as_root=True)
-        utils.execute(
-            'ip', 'link', 'set', if_remote_name, 'netns', nspid,
-            run_as_root=True)
-        utils.execute(
-            'ip', 'netns', 'exec', container_id, 'ifconfig',
-            if_remote_name, ip,
-            run_as_root=True)
+        undo_mgr = utils.UndoManager()
+        try:
+            utils.execute(
+                'ip', 'link', 'add', 'name', if_local_name, 'type',
+                'veth', 'peer', 'name', if_remote_name,
+                run_as_root=True)
+            undo_mgr.undo_with(lambda: utils.execute(
+                'ip', 'link', 'delete', if_local_name, run_as_root=True))
+            # NOTE(samalba): Deleting the interface will delete all associated
+            # resources (remove from the bridge, its pair, etc...)
+            utils.execute(
+                'brctl', 'addif', bridge, if_local_name,
+                run_as_root=True)
+            utils.execute(
+                'ip', 'link', 'set', if_local_name, 'up',
+                run_as_root=True)
+            utils.execute(
+                'ip', 'link', 'set', if_remote_name, 'netns', nspid,
+                run_as_root=True)
+            utils.execute(
+                'ip', 'netns', 'exec', container_id, 'ifconfig',
+                if_remote_name, ip,
+                run_as_root=True)
+        except Exception:
+            msg = _('Failed to setup the network, rolling back')
+            undo_mgr.rollback_and_reraise(msg=msg, instance=instance)
 
     def _get_memory_limit_bytes(self, instance):
         for metadata in instance.get('system_metadata', []):
@@ -301,8 +314,12 @@ class DockerDriver(driver.ComputeDriver):
         container_id = self.find_container_by_name(instance['name']).get('id')
         if not container_id:
             return
-        self.docker.stop_container(container_id)
-        self.docker.start_container(container_id)
+        if not self.docker.stop_container(container_id):
+            LOG.warning(_('Cannot stop the container, '
+                          'please check docker logs'))
+        if not self.docker.start_container(container_id):
+            LOG.warning(_('Cannot restart the container, '
+                          'please check docker logs'))
 
     def power_on(self, context, instance, network_info, block_device_info):
         container_id = self.find_container_by_name(instance['name']).get('id')
