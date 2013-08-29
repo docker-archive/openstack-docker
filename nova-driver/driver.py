@@ -40,10 +40,11 @@ from nova.virt import driver
 
 
 docker_opts = [
-    cfg.StrOpt('docker_registry_default_port',
-           default=5042,
-           help='Default TCP port to find the docker-registry container')
-    ]
+    cfg.IntOpt('docker_registry_default_port',
+               default=5042,
+               help=_('Default TCP port to find the '
+                      'docker-registry container')),
+]
 
 CONF = cfg.CONF
 CONF.register_opts(docker_opts)
@@ -195,9 +196,8 @@ class DockerDriver(driver.ComputeDriver):
                 'mkdir', '-p', netns_path, run_as_root=True)
         nspid = self._find_container_pid(container_id)
         if not nspid:
-            raise RuntimeError(_(
-                'Cannot find any PID under '
-                'container "{0}"'.format(container_id)))
+            msg = _('Cannot find any PID under container "{0}"')
+            raise RuntimeError(msg.format(container_id))
         netns_path = os.path.join(netns_path, container_id)
         utils.execute(
             'ln', '-sf', '/proc/{0}/ns/net'.format(nspid),
@@ -239,8 +239,8 @@ class DockerDriver(driver.ComputeDriver):
     def _get_image_name(self, context, instance, image):
         fmt = image['container_format']
         if fmt != 'docker':
-            raise exception.InstanceDeployFailure(_(
-                'Image container format not supported ({0})'.format(fmt)),
+            msg = _('Image container format not supported ({0})')
+            raise exception.InstanceDeployFailure(msg.format(fmt),
                 instance_id=instance['name'])
         registry_port = self._get_registry_port()
         return '{0}:{1}/{2}'.format(CONF.my_ip,
@@ -268,8 +268,8 @@ class DockerDriver(driver.ComputeDriver):
             args['Cmd'] = default_cmd
         container_id = self.docker.create_container(args)
         if not container_id:
-            LOG.info(_('Image name "{0}" does not exist, '
-                'fetching it...'.format(image_name)))
+            msg = _('Image name "{0}" does not exist, fetching it...')
+            LOG.info(msg.format(image_name))
             res = self.docker.pull_repository(image_name)
             if res is False:
                 raise exception.InstanceDeployFailure(
@@ -284,9 +284,9 @@ class DockerDriver(driver.ComputeDriver):
         try:
             self._setup_network(instance, network_info)
         except Exception as e:
-            raise exception.InstanceDeployFailure(
-                _('Cannot setup network: {0}'.format(e)),
-                instance_id=instance['name'])
+            msg = _('Cannot setup network: {0}')
+            raise exception.InstanceDeployFailure(msg.format(e),
+                                                  instance_id=instance['name'])
 
     def destroy(self, instance, network_info, block_device_info=None,
                 destroy_disks=True):
