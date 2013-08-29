@@ -31,6 +31,7 @@ from nova.compute import task_states
 from nova import exception
 from nova.image import glance
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log
 from nova import utils
 import nova.virt.docker.client
@@ -144,7 +145,11 @@ class DockerDriver(driver.ComputeDriver):
             'hypervisor_type': 'docker',
             'hypervisor_version': '1.0',
             'hypervisor_hostname': nodename,
-            'cpu_info': '?'
+            'cpu_info': '?',
+            'supported_instances': jsonutils([
+                    ('i686', 'docker', 'lxc'),
+                    ('x86_64', 'docker', 'lxc')
+                ])
         }
         return stats
 
