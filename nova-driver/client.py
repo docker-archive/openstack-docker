@@ -16,11 +16,11 @@
 #    under the License.
 
 import functools
-import json
 import socket
 
 from eventlet.green import httplib
 
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 
 
@@ -44,7 +44,7 @@ def filter_data(f):
             if isinstance(obj, dict):
                 for k, v in obj.items():
                     if isinstance(k, basestring):
-                        obj[k.lower()] = v
+                        obj[k.lower()] = _filter(v)
             return obj
         return _filter(out)
     return wrapper
@@ -65,7 +65,7 @@ class Response(object):
         if self._response.getheader('Content-Type') != 'application/json':
             return
         try:
-            return json.loads(self.data)
+            return jsonutils.loads(self.data)
         except ValueError:
             return
 
@@ -133,10 +133,10 @@ class DockerHTTPClient(object):
         resp = self.make_request(
             'POST',
             '/v1.4/containers/create',
-            body=json.dumps(data))
+            body=jsonutils.dumps(data))
         if resp.code != 201:
             return
-        obj = json.loads(resp.data)
+        obj = jsonutils.loads(resp.data)
         for k, v in obj.iteritems():
             if k.lower() == 'id':
                 return v

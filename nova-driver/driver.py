@@ -81,6 +81,10 @@ class DockerDriver(driver.ComputeDriver):
             self.docker.list_containers()
             return True
         except socket.error:
+            # NOTE(samalba): If the daemon is not running, we'll get a socket
+            # error. The list_containers call is safe to call often, there
+            # is an internal hard limit in docker if the amount of containers
+            # is huge.
             return False
 
     def list_instances(self, inspect=False):

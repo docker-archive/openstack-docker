@@ -15,12 +15,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 import mox
 
 from nova import test
 import nova.virt.docker.client
+from nova.openstack.common import jsonutils
 
 
 class FakeResponse(object):
@@ -58,7 +57,7 @@ class DockerHTTPClientTestCase(test.TestCase):
     def test_create_container(self):
         mock_conn = self.mox.CreateMockAnything()
 
-        expected_body = json.dumps({
+        expected_body = jsonutils.dumps({
             'Hostname': '',
             'User': '',
             'Memory': 0,
@@ -95,7 +94,7 @@ class DockerHTTPClientTestCase(test.TestCase):
     def test_create_container_with_args(self):
         mock_conn = self.mox.CreateMockAnything()
 
-        expected_body = json.dumps({
+        expected_body = jsonutils.dumps({
             'Hostname': 'marco',
             'User': '',
             'Memory': 512,
