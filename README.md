@@ -1,4 +1,3 @@
-This code is now available in [Nova](http://docs.openstack.org/developer/nova/) and [DevStack](http://devstack.org/)
-from the Havana release.
+This code is now available in the stackforge repo [nova-docker](https://github.com/stackforge/nova-docker).
 
-[The doc has been moved to the openstack wiki.](https://wiki.openstack.org/wiki/Docker)
+For installation and usage instructions, see the [nova-docker documentation](https://wiki.openstack.org/wiki/Docker).
